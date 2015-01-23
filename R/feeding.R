@@ -11,3 +11,4 @@ eat_proportional_m <- function(amount.mat) {
     sum(X[id] * X * amount.mat[id, ])
   }
 }
+

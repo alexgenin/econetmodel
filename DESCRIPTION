@@ -1,8 +1,8 @@
 Package: netmodr
-Title: What the package does (one line)
-Version: 0.1
-Authors@R: "First Last <first.last@example.com> [aut, cre]"
-Description: What the package does (one paragraph)
+Title: Prototyper for ecological networks modelling
+Version: 0.0001
+Authors@R: "Alexandre Génin <alexandre.genin@univ-montp2.fr> [aut, cre]"
+Description: Prototypes ecological networks.
 Depends: R (>= 3.1.2)
-License: What license is it under?
+License: GPLv3
 LazyData: true
