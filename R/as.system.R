@@ -1,16 +1,13 @@
 
 # Creates a system function suitable for ode() given a list of nodes
-as.system <- function(nodelist, compile=TRUE) { 
-  ids <- as.list(seq.int(nodelist))
-  wrap_do.call <- function(f,...) { do.call(f,list(...)) }
+as.system <- function(sysfun, floor=0) { 
+  wrap_do.call <- function(f,...) { do.call(f,list(...)) } # helper function for mapply
   
-  if (compile && require(compiler)) { 
-    nodelist <- lapply(nodelist, cmpfun)
-  }
-  
-  # Return system function
+  # Apply the limit function provided. The default is to limit species 
+  # Return the system function to be passed to ode
   function(time, state, params) {
-    out <- mapply(wrap_do.call, nodelist, ids, MoreArgs=list(state))
+    state[state<floor] <- 0
+    out <- sysfun(state)
     return(list(out))
   }
 }
