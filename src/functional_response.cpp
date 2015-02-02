@@ -5,6 +5,7 @@ using namespace Rcpp;
 
 // [[Rcpp::export]]
 NumericMatrix frtype2(NumericVector X, NumericMatrix A, NumericMatrix B0) { 
+// Functional response of the form 
   int N = X.size(); 
   NumericMatrix dX(N,N); // flow of biomass from j to i
   double den; // sum in the denominator of FR
@@ -23,3 +24,4 @@ NumericMatrix frtype2(NumericVector X, NumericMatrix A, NumericMatrix B0) {
   
   return dX;
 }
+

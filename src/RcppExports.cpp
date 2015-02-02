@@ -39,3 +39,19 @@ BEGIN_RCPP
     return __sexp_result;
 END_RCPP
 }
+// mortality
+NumericVector mortality(NumericVector X, NumericVector m);
+RcppExport SEXP netmodr_mortality(SEXP XSEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    SEXP __sexp_result;
+    {
+        Rcpp::RNGScope __rngScope;
+        Rcpp::traits::input_parameter< NumericVector >::type X(XSEXP );
+        Rcpp::traits::input_parameter< NumericVector >::type m(mSEXP );
+        NumericVector __result = mortality(X, m);
+        PROTECT(__sexp_result = Rcpp::wrap(__result));
+    }
+    UNPROTECT(1);
+    return __sexp_result;
+END_RCPP
+}

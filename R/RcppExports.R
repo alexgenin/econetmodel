@@ -9,3 +9,7 @@ loggrowth <- function(X, R, K) {
     .Call('netmodr_loggrowth', PACKAGE = 'netmodr', X, R, K)
 }
 
+mortality <- function(X, m) {
+    .Call('netmodr_mortality', PACKAGE = 'netmodr', X, m)
+}
+
