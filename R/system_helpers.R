@@ -4,3 +4,8 @@
 last_state <- function(syslist) {
   with(syslist, state[nrow(state),-1])
 }
+
+# Get the last time value of a system
+last_time <- function(syslist) {
+  with(syslist, state[nrow(state),1])
+}

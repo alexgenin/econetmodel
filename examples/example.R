@@ -2,10 +2,11 @@
 # Note: we load libraries as quickly as possible
 library(deSolve)
 library(rootSolve)
+library(magrittr)
+
 # Helper function
 N.nodes <- 4
 as.sysmat <- function(vec) matrix(vec, ncol=N.nodes, byrow=TRUE)
-
 
 ## Resources growth
 rs <- c(.3, .3, 0, 0) # rate
@@ -37,7 +38,10 @@ sysfun <- function(time, X, parms) {
 syslist <- syslist_create(sysfun, 0, rep(.1,N.nodes))
 
 ## OK, we run the system
-result <-  syslist %>% run_to_eq() %>% remove_species(4) %>% run_to_eq()
+result <-  syslist %>% 
+             run_to_eq() %>% 
+             remove_species(4) %>% 
+             run_to_eq()
 
 # Format and plot
 library(ggplot2)

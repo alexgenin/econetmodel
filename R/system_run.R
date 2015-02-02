@@ -2,32 +2,40 @@
 # Takes a system and a state, and runs it till equilibrium is reached.
 # 
 
-# Run a system
+# Run a system for a given amount of time or along a vector of time
 run <- function(syslist, times) {
   
   init_ode <- last_state(syslist)
   
+  # Handle time specification
+  if (length(times) == 1) { 
+    times <- seq(last_time(syslist),
+                 last_time(syslist) + times,
+                 by=syslist[['tres']])
+  } 
+  
   new.values <- with(syslist,
                      ode(y=init_ode, 
-                         times=seq(time, ceiling(time_to_eq), by=tres),
+                         times=times,
                          func=func,
                          parms=NULL))
   
   syslist[['state']] <- rbind(syslist[['state']], new.values)
-  syslist[['time']]  <- ceiling(syslist[['time_to_eq']])
+  syslist[['time']]  <- new.values[nrow(new.values), 1]
   
   return(syslist)
 }
 
+# Run a system to equilibrium
 run_to_eq <- function(syslist, 
-                      full.calc=TRUE, # compute every step, not just end state
-                      tmax=Inf,       # Max time before bailing if eq not reached
-                      parms=NULL) { 
+                      full.calc=TRUE, # retrieve every step, not just end state
+                      tmax=Inf) { 
 # Note that this function runs the calculations twice, hence it is surely not 
 # very efficient... <!todo!> !
   
   # Extract last state reached in deSolve format
-  init_ode <- last_state(syslist)
+  init_ode  <- last_state(syslist)
+  init_time <- last_time(syslist)
   
   # Compute steady state
   solution <- with(syslist,
@@ -36,16 +44,16 @@ run_to_eq <- function(syslist,
                              times=c(time,tmax), 
                              parms=NULL))
   
-  # Save info on system
-  syslist[['time_to_eq']] <- attr(solution, 'time')
+  # Save info on time at eq
+  time_to_eq <- attr(solution, 'time')
   
-  # Get the state
+  # Get the final state or all the steps
   if (!full.calc) {
-    syslist[['state']] <- solution$y
+    syslist[['state']] <- c(time=time_to_eq, solution$y)
+    return(syslist)
   } else { 
-    times <- run(syslist, seq(time, ceiling(time_to_eq), by=tres))
-    syslist <- run(syslist, times)
+    times <- with(syslist, seq(time, time_to_eq, by=tres))
+    return(run(syslist, times))
   }
   
-  return(syslist)
 }
