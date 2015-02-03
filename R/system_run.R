@@ -18,7 +18,7 @@ run <- function(syslist, times) {
                      ode(y=init_ode, 
                          times=times,
                          func=func,
-                         parms=NULL))
+                         parms=parms))
   
   syslist[['state']] <- rbind(syslist[['state']], new.values)
   syslist[['time']]  <- new.values[nrow(new.values), 1]
@@ -35,25 +35,30 @@ run_to_eq <- function(syslist,
   
   # Extract last state reached in deSolve format
   init_ode  <- last_state(syslist)
-  init_time <- last_time(syslist)
   
   # Compute steady state
   solution <- with(syslist,
                    runsteady(init_ode, 
                              func=func, 
                              times=c(time,tmax), 
-                             parms=NULL))
+                             parms=parms))
   
   # Save info on time at eq
   time_to_eq <- attr(solution, 'time')
   
   # Get the final state or all the steps
   if (!full.calc) {
-    syslist[['state']] <- c(time=time_to_eq, solution$y)
+    new.solution <- matrix(c(time_to_eq, solution$y),
+                           dimnames=list(NULL, colnames(syslist[['state']])),
+                           nrow=1)
+    syslist[['state']] <- new.solution
+    syslist[['time']]  <- time_to_eq
     return(syslist)
+    
   } else { 
     times <- with(syslist, seq(time, time_to_eq, by=tres))
     return(run(syslist, times))
+    
   }
   
 }

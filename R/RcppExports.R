@@ -13,3 +13,7 @@ mortality <- function(X, m) {
     .Call('netmodr_mortality', PACKAGE = 'netmodr', X, m)
 }
 
+system_kefi <- function(times, X, p) {
+    .Call('netmodr_system_kefi', PACKAGE = 'netmodr', times, X, p)
+}
+

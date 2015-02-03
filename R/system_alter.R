@@ -12,3 +12,8 @@ state_alter <- function(syslist,newstate) {
   return(syslist)
 }
 
+reset_time <- function(syslist,newtime=0) {
+  syslist[['state']] <- last_state(syslist, with.time=TRUE)
+  syslist[['time' ]] <- newtime
+  return(syslist)
+}
