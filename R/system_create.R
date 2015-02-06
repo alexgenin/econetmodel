@@ -1,22 +1,24 @@
 
 # Create a state-representing object 
-syslist_create <- function(sysfun,init.time,X,
-                           parms=NULL,
-                           ...,
-                           tres=1, # time resolution
-                           state.names.skl='node') {
+create_system <- function(sysfun,
+                          init_time,
+                          init_state,
+                          parms=NULL,
+                          ...,
+                          tres=1, # time resolution
+                          node_names_base='node') {
   
-  N <- length(X)
+  N <- length(init_state)
   
-  if (is.null(names(X))) { 
-    names(X) <- paste0(state.names.skl, seq.int(N))
+  if (is.null(names(init_state))) { 
+    names(init_state) <- paste0(node_names_base, seq.int(N))
   } 
   
   # Create state matrix and adjust names
-  state <- matrix(c(time=init.time, X), ncol=N+1)
-  colnames(state) <- c('time', names(X))
+  state <- matrix(c(time=init_time, init_state), ncol=N+1)
+  colnames(state) <- c('time', names(init_state))
   
-  syslist <- list(time=init.time, 
+  syslist <- list(time=init_time, 
                   state=state, 
                   func=sysfun, 
                   tres=tres, 
@@ -25,3 +27,17 @@ syslist_create <- function(sysfun,init.time,X,
   return(syslist)
 }
 
+syslist_create <- function(sysfun, init.time, X, parms=NULL, 
+                           ..., 
+                           tres=1, 
+                           state.names.skl="node") { 
+  warning('syslist_create is deprecated <!todo!>') #<!todo!>
+  
+  create_system(sysfun, 
+                init_time=init.time, 
+                init_state=X,
+                parms=parms,
+                tres=tres,
+                node_names_base=state.names.skl)
+}
+                           

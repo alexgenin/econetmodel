@@ -55,3 +55,20 @@ BEGIN_RCPP
     return __sexp_result;
 END_RCPP
 }
+// rockyshore
+List rockyshore(NumericVector times, NumericVector X, List p);
+RcppExport SEXP netmodr_rockyshore(SEXP timesSEXP, SEXP XSEXP, SEXP pSEXP) {
+BEGIN_RCPP
+    SEXP __sexp_result;
+    {
+        Rcpp::RNGScope __rngScope;
+        Rcpp::traits::input_parameter< NumericVector >::type times(timesSEXP );
+        Rcpp::traits::input_parameter< NumericVector >::type X(XSEXP );
+        Rcpp::traits::input_parameter< List >::type p(pSEXP );
+        List __result = rockyshore(times, X, p);
+        PROTECT(__sexp_result = Rcpp::wrap(__result));
+    }
+    UNPROTECT(1);
+    return __sexp_result;
+END_RCPP
+}

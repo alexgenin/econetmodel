@@ -7,5 +7,5 @@ Depends: R (>= 3.1.2)
 License: GPLv3
 LazyData: true
 LinkingTo: Rcpp
-Imports: Rcpp, deSolve, rootSolve, magrittr, 
+Imports: Rcpp, deSolve, rootSolve, magrittr, plyr
 Suggests: testthat, ggplot2, tidyr

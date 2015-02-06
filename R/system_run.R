@@ -3,22 +3,21 @@
 # 
 
 # Run a system for a given amount of time or along a vector of time
-run <- function(syslist, times) {
+run <- function(syslist, times, method=rkMethod('ode45')) {
   
   init_ode <- last_state(syslist)
   
   # Handle time specification
   if (length(times) == 1) { 
-    times <- seq(last_time(syslist),
-                 last_time(syslist) + times,
-                 by=syslist[['tres']])
+    times <- with(syslist, seq(time, time+times, by=tres))
   } 
   
   new.values <- with(syslist,
                      ode(y=init_ode, 
                          times=times,
                          func=func,
-                         parms=parms))
+                         parms=parms,
+                         method=method))
   
   syslist[['state']] <- rbind(syslist[['state']], new.values)
   syslist[['time']]  <- new.values[nrow(new.values), 1]
