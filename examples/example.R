@@ -35,7 +35,7 @@ sysfun <- function(time, X, parms) {
           }
 
 ## Initial state 
-syslist <- syslist_create(sysfun, 0, rep(.1,N.nodes))
+syslist <- syslist_create(sysfun, 0, rpois(N.nodes,10))
 
 ## OK, we run the system
 result <-  syslist %>% 

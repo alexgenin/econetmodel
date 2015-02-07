@@ -1,6 +1,8 @@
 # 
 # Explore a parameter space
 # 
+library(plyr)
+library(magrittr)
 
 # Helpers
 N.nodes <- 4
@@ -29,19 +31,16 @@ sysfun <- function(time, X, parms) {
 
 ## Define analysis pipeline
 pipeline <- function(x) { 
-  parms[['fs']][4,3] <- x$a34
-  parms[['fs']][3,4] <- -x$a34
+#   parms[['fs']][4,3] <- x$a34
+#   parms[['fs']][3,4] <- -x$a34
   
   syslist_create(sysfun, 
                   init.time=0, 
-                  X=rep(8,4), 
+                  X=runif(4,0,20), 
                   tres=.2,
                   parms=parms) %>% 
-  run_to_eq(full.calc=FALSE)   %>% 
-  reset_time()                 %>%
-  remove_species(4)            %>% 
-  run_to_eq()                  %>% 
-  last_state_df()
+  run_to_eq(full.calc=TRUE) %>%
+  .[['state']]
 }
 
 ## Compute
@@ -56,4 +55,7 @@ library(ggplot2)
 # plot.dat <- gather_(as.data.frame(result), "sp", "ab", 
 #                     paste0("node",seq.int(N.nodes)))
 ggplot(result) + 
-  geom_line(aes(a34,node3))
+  geom_path(aes(time,node4, group=a34), alpha='.2') 
+#   scale_x_sqrt()
+  
+
