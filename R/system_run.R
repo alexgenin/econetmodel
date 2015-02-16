@@ -3,7 +3,7 @@
 # 
 
 # Run a system for a given amount of time or along a vector of time
-run <- function(syslist, times, method=rkMethod('ode45')) {
+run <- function(syslist, times, method=rkMethod('ode45'), ...) {
   
   init_ode <- last_state(syslist)
   
@@ -17,7 +17,8 @@ run <- function(syslist, times, method=rkMethod('ode45')) {
                          times=times,
                          func=func,
                          parms=parms,
-                         method=method))
+                         method=method,
+                         ...))
   
   syslist[['state']] <- rbind(syslist[['state']], new.values)
   syslist[['time']]  <- new.values[nrow(new.values), 1]
@@ -28,7 +29,8 @@ run <- function(syslist, times, method=rkMethod('ode45')) {
 # Run a system to equilibrium
 run_to_eq <- function(syslist, 
                       full.calc=TRUE, # retrieve every step, not just end state
-                      tmax=Inf) { 
+                      tmax=Inf,
+                      ...) { 
 # Note that this function runs the calculations twice, hence it is surely not 
 # very efficient... <!todo!> !
   
@@ -53,10 +55,10 @@ run_to_eq <- function(syslist,
     syslist[['state']] <- new.solution
     syslist[['time']]  <- time_to_eq
     return(syslist)
-    
+  
   } else { 
     times <- with(syslist, seq(time, time_to_eq, by=tres))
-    return(run(syslist, times))
+    return(run(syslist, times, ...))
     
   }
   

@@ -11,37 +11,56 @@
 #   5 crabs
 
 size <- 5
-sysmat <- function(vec) matrix(vec, ncol=size, nrow=size)
+sysmat <- function(vec) matrix(vec, ncol=size, nrow=size, byrow=TRUE)
 
-ats.qualitative <- sysmat(c(0, 0, 0, 0, 0,
-                            1, 0, 0, 0, 0,
-                            1, 0, 0, 0, 0,
-                            0, 1, 1, 0, 0,
-                            0, 1, 1, 0, 0))
-ats.quantitative <- ats.qualitative * sysmat(abs(rnorm(size^2, 0, .1)))
+# Define some parameters
+bodyms <- c(1,10,10,100,100)
+
+# Generate metabolic rates
+mr0     <- 0.2227 # ?
+mr0exp  <- -.25   # yes !
+xs <- gen_met_rates(bodyms, mr0, mr0exp);
+
+# Generate atk rates
+a0  <- 27.23734
+eps <- 0.01064
+atks.qualitative <- sysmat(c(0,0,0,0,0,  # algae
+                             1,0,0,0,0,  # grz1
+                             1,0,0,0,0,  # grz2
+                             0,1,1,0,0,  # tp1
+                             0,1,1,0,0)) # tp2
+atks <- gen_atk_rates(bodyms, xs, a0, eps) * atks.qualitative
+
+# Comsumption rates
+ws <- sysmat(c(0,   0,  0, 0, 0,
+               .25, 0,  0, 0, 0,
+               .25, 0,  0, 0, 0,
+               0,  .1, .1, 0, 0,
+               0,  .1, .1, 0, 0))
 
 parameters <- list(
   # Producers' logistic growth
-    # growth rateà
-    rs  = c(.01, rep(0,size-1)),              
+  # growth rate
+    rs  = c(1, rep(0,size-1)), 
     # carrying capacities
-    Ks  = rep(10, size),                  
+    Ks  = rep(10, size),
   # Consumption
-    # attack rates (not as as it is a reserved keyword in cpp)
-    ats = ats.quantitative, 
     # consumption rates
-    ws  = sysmat(.2), 
+    ws  = ws, 
     # conversion efficiencies
-    es  = sysmat(1), 
+    es  = sysmat(0.85), 
     # handling times
-    hs  = rep(1,size),                   
-    # metabolic rate
-    xs  = rep(.1,size)                   
-  )
+    hs  = 1/(8*xs),                   
+    # metabolic rates (plants have one)
+    xs  = xs,
+    # attack rates (not as as it is a reserved keyword in cpp and we want to be consistent)
+    atks = atks
+)
 
-init <- runif(size,.1,10)
+init <- runif(size, .1, 10)
 system <- create_system(rockyshore, 
                         init_time=0, 
+                        tres=1,
                         init_state=init, 
                         parms=parameters) 
 
@@ -49,20 +68,31 @@ system <- create_system(rockyshore,
 with(system, func(time, as.vector(state[ ,-1]), parms)) 
 
 # Run da stuff
-result <- ddply(data.frame(N=seq.int(200)), ~ N, 
-                function(dat) { 
-                  system %>%
-                    run(times=200) %>%
-                    remove_species(2) %>%
-                    run_to_eq(tmax=2000) %>%
-                    .[['state']]
-                },
-                .progress='time')
+ii <- profr(
+  result <- ddply(data.frame(N=seq.int(50)), ~N, 
+                  function(x) {
+                    Sys.sleep(1)
+                    system %>% 
+                      state_alter(runif(size,.1,10)) %>%
+                      run(1000) %>%
+                      remove_species(5) %>%
+                      run(1000) %>%
+                      .[['state']]
+                  },
+                  .progress='time'),
+                  0.01)
+
 
 # Format and plot
-library(tidyr); library(ggplot2)
+library(tidyr) 
+library(ggplot2)
+
 plot.dat <- gather(as.data.frame(result), sp, ab, node1:node5)
 
-ggplot(plot.dat) + 
-  geom_line(aes(time, ab, color=sp)) + 
-  scale_x_sqrt()
+ggplot(subset(plot.dat)) + 
+  geom_line(aes(time, ab, color=sp, group=N), alpha=.2) + 
+#   geom_point(aes(time, ab, color=sp)) + 
+  facet_grid(sp~.) +
+  scale_x_sqrt() 
+#   ylim(c(0,3))
+

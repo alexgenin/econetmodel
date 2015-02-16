@@ -57,5 +57,4 @@ library(ggplot2)
 ggplot(result) + 
   geom_path(aes(time,node4, group=a34), alpha='.2') 
 #   scale_x_sqrt()
-  
 

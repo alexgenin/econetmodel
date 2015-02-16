@@ -1,4 +1,4 @@
-
+/*
 // Defines a logistic growth for a species
 #include <Rcpp.h>
 using namespace Rcpp;
@@ -15,4 +15,4 @@ NumericVector loggrowth(NumericVector X, NumericVector R, NumericVector K) {
   }
   
   return dX;
-}
+}*/

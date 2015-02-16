@@ -8,7 +8,7 @@ remove_species <- function(syslist, which) {
 }
 
 state_alter <- function(syslist,newstate) {
-  with(syslist, state[nrow(state), ] <- newstate)
+  syslist[['state']][nrow(syslist[['state']]), ] <- c(syslist[['time']], newstate)
   return(syslist)
 }
 

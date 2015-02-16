@@ -5,34 +5,35 @@
 
 using namespace Rcpp;
 
-// frtype2
-NumericMatrix frtype2(NumericVector X, NumericMatrix A, NumericMatrix B0);
-RcppExport SEXP netmodr_frtype2(SEXP XSEXP, SEXP ASEXP, SEXP B0SEXP) {
+// bmgen_mrates
+NumericVector bmgen_mrates(NumericVector bodyms, double mr0, double mr0exp);
+RcppExport SEXP netmodr_bmgen_mrates(SEXP bodymsSEXP, SEXP mr0SEXP, SEXP mr0expSEXP) {
 BEGIN_RCPP
     SEXP __sexp_result;
     {
         Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< NumericVector >::type X(XSEXP );
-        Rcpp::traits::input_parameter< NumericMatrix >::type A(ASEXP );
-        Rcpp::traits::input_parameter< NumericMatrix >::type B0(B0SEXP );
-        NumericMatrix __result = frtype2(X, A, B0);
+        Rcpp::traits::input_parameter< NumericVector >::type bodyms(bodymsSEXP );
+        Rcpp::traits::input_parameter< double >::type mr0(mr0SEXP );
+        Rcpp::traits::input_parameter< double >::type mr0exp(mr0expSEXP );
+        NumericVector __result = bmgen_mrates(bodyms, mr0, mr0exp);
         PROTECT(__sexp_result = Rcpp::wrap(__result));
     }
     UNPROTECT(1);
     return __sexp_result;
 END_RCPP
 }
-// loggrowth
-NumericVector loggrowth(NumericVector X, NumericVector R, NumericVector K);
-RcppExport SEXP netmodr_loggrowth(SEXP XSEXP, SEXP RSEXP, SEXP KSEXP) {
+// bmgen_arates
+NumericMatrix bmgen_arates(NumericVector bodyms, NumericVector mrates, double a0, double eps);
+RcppExport SEXP netmodr_bmgen_arates(SEXP bodymsSEXP, SEXP mratesSEXP, SEXP a0SEXP, SEXP epsSEXP) {
 BEGIN_RCPP
     SEXP __sexp_result;
     {
         Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< NumericVector >::type X(XSEXP );
-        Rcpp::traits::input_parameter< NumericVector >::type R(RSEXP );
-        Rcpp::traits::input_parameter< NumericVector >::type K(KSEXP );
-        NumericVector __result = loggrowth(X, R, K);
+        Rcpp::traits::input_parameter< NumericVector >::type bodyms(bodymsSEXP );
+        Rcpp::traits::input_parameter< NumericVector >::type mrates(mratesSEXP );
+        Rcpp::traits::input_parameter< double >::type a0(a0SEXP );
+        Rcpp::traits::input_parameter< double >::type eps(epsSEXP );
+        NumericMatrix __result = bmgen_arates(bodyms, mrates, a0, eps);
         PROTECT(__sexp_result = Rcpp::wrap(__result));
     }
     UNPROTECT(1);
@@ -49,6 +50,23 @@ BEGIN_RCPP
         Rcpp::traits::input_parameter< NumericVector >::type X(XSEXP );
         Rcpp::traits::input_parameter< NumericVector >::type m(mSEXP );
         NumericVector __result = mortality(X, m);
+        PROTECT(__sexp_result = Rcpp::wrap(__result));
+    }
+    UNPROTECT(1);
+    return __sexp_result;
+END_RCPP
+}
+// fresp_type2
+NumericMatrix fresp_type2(NumericVector X, NumericMatrix atk, NumericVector h);
+RcppExport SEXP netmodr_fresp_type2(SEXP XSEXP, SEXP atkSEXP, SEXP hSEXP) {
+BEGIN_RCPP
+    SEXP __sexp_result;
+    {
+        Rcpp::RNGScope __rngScope;
+        Rcpp::traits::input_parameter< NumericVector >::type X(XSEXP );
+        Rcpp::traits::input_parameter< NumericMatrix >::type atk(atkSEXP );
+        Rcpp::traits::input_parameter< NumericVector >::type h(hSEXP );
+        NumericMatrix __result = fresp_type2(X, atk, h);
         PROTECT(__sexp_result = Rcpp::wrap(__result));
     }
     UNPROTECT(1);

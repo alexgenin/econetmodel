@@ -11,3 +11,10 @@ generate_cpp_types <- function(parameters) {
     cat(paste0(type," ",names(item)," = as<",type,">(p[\"",names(item),"\"]);"),"\n")
   }
 }
+
+
+sqrt_times <- function(from,to,length.out) { 
+  stop('Not implemented <!todo!>')
+  return(NULL)
+}
+
