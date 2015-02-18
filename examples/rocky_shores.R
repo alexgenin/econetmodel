@@ -29,21 +29,22 @@ atks.qualitative <- sysmat(c(0,0,0,0,0,  # algae
                              1,0,0,0,0,  # grz2
                              0,1,1,0,0,  # tp1
                              0,1,1,0,0)) # tp2
+# atks <- gen_atk_rates(bodyms, xs, a0, eps) * atks.qualitative
 atks <- gen_atk_rates(bodyms, xs, a0, eps) * atks.qualitative
 
 # Comsumption rates
-ws <- sysmat(c(0,   0,  0, 0, 0,
-               .25, 0,  0, 0, 0,
-               .25, 0,  0, 0, 0,
-               0,  .1, .1, 0, 0,
-               0,  .1, .1, 0, 0))
+ws <- sysmat(c(0,  0,  0, 0, 0,
+               1,  0,  0, 0, 0,
+               .4, 0,  0, 0, 0,
+               0, .5, .5, 0, 0,
+               0, .5, .5, 0, 0))
 
 parameters <- list(
   # Producers' logistic growth
   # growth rate
-    r  = c(1, rep(0,size-1)), 
+    r  = c(1, rep(0,Nsp-1)), 
     # carrying capacities
-    K  = rep(10, size),
+    K  = rep(1, Nsp),
   # Consumption
     # conversion efficiencies
     e  = sysmat(0.85), 
@@ -53,35 +54,52 @@ parameters <- list(
     h  = 1/(8*xs),                   
     # metabolic rates (plants have one)
     x  = xs,
-    # attack rates (not as as it is a reserved keyword in cpp and we want to be consistent)
+    # attack rates (not as !! )
     atk = atks
 )
 
+parameters.c <- prepare_parameters(parameters)
+
+# Compile and load c code
 clean_c_code("./src/templates/")
 gen_c_code(parameters, "./src/templates/rockyshore.c.template", overwrite=TRUE)
-document()
-dyn.load('./src/netmodr.so')
+document() # loads .so too
 
-replicate_groups <- as.list(seq.int(500))
-system.time(
-  result <- lapply(replicate_groups, function(x) { 
-              ode(y=runif(Nsp,.1,10), 
-                times=seq(0,120,l=1000),
-                parms=unlist(parameters),
-                func='rockyshore', 
-                initfun="initmod",
-                dllname='netmodr', 
-                nout=1)
-            })
-)
+# Define run variables
+times      <- seq(0,1000,l=3000)
+parms      <- parameters.c
+init.state <- rnorm(Nsp,.5,.1)
+names(init.state) <- paste0('node',seq.int(Nsp))
+events     <- list(func='killspecies', 
+                   time=nearestEvent(500,times))
 
-for (i in seq.int(length(result))) { 
-  result[[i]] <- result[[i]][ ,-ncol(result[[i]])]
-  colnames(result[[i]]) <- c("time", paste0("node",seq.int(Nsp)))
-  result[[i]] <- cbind(N=i,result[[i]])
+system <- list(y=init.state,
+               times=times,
+               parms=parms,
+               func='rockyshore', 
+               initfun="initmod",
+               dllname='netmodr', 
+               events=list(func='spkill',
+                           time=nearestEvent(500,times)),
+               nout=1,
+               outnames='total',
+               method='lsoda')
+
+pipeline <- function(x) { 
+  system %>% 
+    alter(y=runif(Nsp, 0, 1)) %>%
+    do.call(ode,.) %>% 
+    cbind(x,.)
 }
 
-result <- do.call(rbind, result)
+system.time(
+  result.raw <- lapply(as.list(seq.int(100)), pipeline) 
+)
+
+# Format output 
+result <- do.call(rbind, result.raw)
+# result <- result[ ,-ncol(result)]
+colnames(result) <- c('N','time',paste0('node',seq.int(Nsp)),'total')
 
 # Format and plot
 library(tidyr)
@@ -92,7 +110,6 @@ plot.dat <- gather(as.data.frame(result), sp, ab, node1:node5)
 ggplot(subset(plot.dat)) + 
   geom_line(aes(time, ab, group=N), alpha=.1) + 
 #   geom_point(aes(time, ab, color=sp)) + 
-  facet_grid(sp~.) +
-  scale_x_sqrt() 
+  facet_grid(sp~.) 
 #   ylim(c(0,3))
 

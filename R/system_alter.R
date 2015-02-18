@@ -17,3 +17,9 @@ reset_time <- function(syslist,newtime=0) {
   syslist[['time' ]] <- newtime
   return(syslist)
 }
+
+alter <- function(list, add=FALSE, ...) { 
+  modifs <- match.call(expand.dots=FALSE)[['...']]
+  list[names(modifs)] <- lapply(modifs,eval)
+  return(list)
+}

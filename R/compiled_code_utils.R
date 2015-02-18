@@ -4,7 +4,7 @@ compile_load <- function(file) {
   
   file.base <- sub('.c','',basename(file), fixed=TRUE)
   
-  system(paste('R CMD SHLIB', file))
+  system(paste('CCFLAGS="-Wall" R CMD SHLIB', file))
   dyn.load(paste0(dirname(file),'/',file.base,'.so'))
   
   return(NULL)
