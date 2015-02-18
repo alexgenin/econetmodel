@@ -12,9 +12,8 @@ generate_cpp_types <- function(parameters) {
   }
 }
 
-
 sqrt_times <- function(from,to,length.out) { 
-  stop('Not implemented <!todo!>')
+  stop('Not implemented <!todo!>') #<!todo!>
   return(NULL)
 }
 

@@ -12,13 +12,18 @@ run <- function(syslist, times, method=rkMethod('ode45'), ...) {
     times <- with(syslist, seq(time, time+times, by=tres))
   } 
   
+  browser()
+  
   new.values <- with(syslist,
-                     ode(y=init_ode, 
-                         times=times,
-                         func=func,
-                         parms=parms,
-                         method=method,
-                         ...))
+                     do.call(ode,
+                             c(y=init_ode, 
+                               times=times,
+                               func=func,
+                               parms=parms,
+                               method=method,
+                               ode_args,
+                               ...)) 
+                     )
   
   syslist[['state']] <- rbind(syslist[['state']], new.values)
   syslist[['time']]  <- new.values[nrow(new.values), 1]
