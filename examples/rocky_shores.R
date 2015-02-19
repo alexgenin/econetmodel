@@ -35,7 +35,7 @@ atks <- gen_atk_rates(bodyms, xs, a0, eps) * atks.qualitative
 # Comsumption rates
 ws <- sysmat(c(0,  0,  0, 0, 0,
                1,  0,  0, 0, 0,
-               .4, 0,  0, 0, 0,
+               1,  0,  0, 0, 0,
                0, .5, .5, 0, 0,
                0, .5, .5, 0, 0))
 
@@ -58,20 +58,18 @@ parameters <- list(
     atk = atks
 )
 
-parameters.c <- prepare_parameters(parameters)
-
 # Compile and load c code
 clean_c_code("./src/templates/")
 gen_c_code(parameters, "./src/templates/rockyshore.c.template", overwrite=TRUE)
 document() # loads .so too
 
 # Define run variables
-times      <- seq(0,1000,l=3000)
-parms      <- parameters.c
+times      <- seq(0,2000,l=1000)
+parms      <- prepare_parameters(parameters)
 init.state <- rnorm(Nsp,.5,.1)
 names(init.state) <- paste0('node',seq.int(Nsp))
 events     <- list(func='killspecies', 
-                   time=nearestEvent(500,times))
+                   time=nearestEvent(1000,times))
 
 system <- list(y=init.state,
                times=times,
@@ -110,6 +108,6 @@ plot.dat <- gather(as.data.frame(result), sp, ab, node1:node5)
 ggplot(subset(plot.dat)) + 
   geom_line(aes(time, ab, group=N), alpha=.1) + 
 #   geom_point(aes(time, ab, color=sp)) + 
-  facet_grid(sp~.) 
-#   ylim(c(0,3))
+  facet_grid(sp~.) +
+  ylim(c(0,1.1))
 

@@ -1,5 +1,5 @@
 #include <R.h>
-#include <float.h>
+#include "./functional_response.h"
 
 // Print debug messages ?
 static int dbg=0;
@@ -55,6 +55,7 @@ void rockyshore(int *neq,     // neq is the number of equations
                               //  length of yout,
                               //  length of *ip]
 {
+  double funcresp=0; // functional response
   
   // Ensures correct memory allocation
   if (ip[0] < 1) error("nout should be at least 1");
@@ -66,26 +67,28 @@ void rockyshore(int *neq,     // neq is the number of equations
   }
   
   // Compute logistic growth for each species
-  // NB: we assign and initialize the ydot values here
   for (int i=0; i<*neq; i++) { 
     ydot[i] = p.r[i] * y[i] * (1 - y[i] / p.K[i]);
   }
   
-  // Compute interactions
+  // Compute effect of trophic interactions
   for (int i=0; i<*neq; i++) {
     for (int j=0; j<*neq; j++) {
       
       if (dbg) { 
-        Rprintf("%i %i %f |\n", i+1, j+1, p.w[i][j]);
+        if (i == 1 && j == 0) { 
+          Rprintf("%i %i: %f |", i+1, j+1, 
+                  frtype2(&y[j], &p.atk[i][j], &p.h[j]));
+        }
       }
       
-      // Species i eats
-      ydot[i] += y[i] * p.w[i][j] * p.atk[i][j] * y[j] / 
-                   (1 + p.atk[i][j] * p.h[j] * y[j]);
+      // Species i eats j
+      funcresp = frtype2(&y[j], &p.atk[i][j], &p.h[j]);
+      ydot[i] += y[i] * p.w[i][j] * funcresp;
       
-      // Species i gets eaten
-      ydot[i] += - y[j] * p.w[j][i] * p.atk[j][i] * y[i] / 
-                     (1 + p.atk[j][i] * p.h[i] * y[i]);
+      // Species i gets eaten by j
+      funcresp = frtype2(&y[i], &p.atk[j][i], &p.h[i]);
+      ydot[i] += - y[j] * p.w[j][i] * funcresp / p.e[j][i];
       
     }
   }
@@ -101,7 +104,7 @@ void rockyshore(int *neq,     // neq is the number of equations
   
   // Compute other stuff we want to return if necessary
   for (int i=0; i<*neq; i++) { 
-    yout[0] += y[i] + ydot[i];
+    yout[0] += y[i] + ydot[i]; // total abundance
   }
   
   // NB: there is no need to return anything: all the stuff is modified in place
@@ -110,7 +113,7 @@ void rockyshore(int *neq,     // neq is the number of equations
 
 /* We define here an event that will happen at a time specified in R */
 void spkill(int *n, double *t, double *y) { 
-  // Modify the system's state in place !
+  // Modifies the system's state in place !
   y[4] = 0; // OMG kill a top predator !!!
 }
 
