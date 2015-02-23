@@ -6,7 +6,7 @@
 run <- function(sys, tmax, ...) {
   
   # Handle time specification
-  times <- seq(get_time(sys), tmax, by=get_timestep(sys))
+  times <- seq(get_time(sys), get_tmax(sys), by=get_timestep(sys))
   
   new.values <- do.call(ode,c(list(y=get_state(sys)), 
                               list(times=times),

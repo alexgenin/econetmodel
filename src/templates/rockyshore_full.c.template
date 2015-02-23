@@ -1,10 +1,11 @@
 #include <R.h>
-#include "./functional_response.h"
-#include <math.h> // for fmaxf
+#include "exports.h"
+#include <math.h> // for fmax
 
 // Print debug messages ?
 static int dbg=0;
-static double zerotol=1e-30; 
+static double zerotol=1e-8; 
+static double eq_zerotol=1e-16; 
 
 /*
  * Note: C STORES ARRAYS IN ROW-MAJOR ORDER !!!
@@ -53,36 +54,40 @@ void initmod(void (* odeparms)(int *, double *)) {
 }
 
 /* This function solves for a root (returns 0 if root is reached) and follows
- * the guidelines provided by deSolve. It tests whether the system has reached
- * equilibrium by inspecting the derivatives array (ydot_global).
+ * the guidelines provided by deSolve. It allows us to monitor the behavior
+ * of the model and decide on what to do.
  */
-void equilibrium(int *neq, 
-                 double *t, 
-                 double *y, 
-                 int *ng, 
-                 double *gout,
-                 double *out, 
-                 int *ip ) { 
+void controlf(int *neq, 
+              double *t, 
+              double *y, 
+              int *ng, 
+              double *gout,
+              double *out, 
+              int *ip) { 
   
-  // We store the maximum derivative in gout[0] and the number of roots 
-  double max_deriv=0;
-  // we do our own root detection instead of passing the job to deSolve 
-  // because we need to count the number of equilibria reached
-  double eq_unreached=1; 
+  // We store the maximum derivative in gout[0] and the number of roots. Do not
+  // set to 0 (otherwise there will be a false equilibirum detected on step 1)
+  // 
+  // We do our own root detection instead of passing the job to deSolve 
+  // because we need to count the number of equilibria reached.
+  // Note that deSolve triggers stuff when roots are zero !!!
+  double eq_unreached = -1; 
   
-  // We return the maximum derivative and let deSolve judge whether it is close
-  // enough to zero (=root reached).
-  for (int i=0; i<*neq; i++) {
-    max_deriv = fmaxf(max_deriv, ydot_global[i]);
-  }
+  // We decide whether to stop or not the simulation depending on the number 
+  // of equilibria we have reached so far.
+  int got_eq = 0;
   
-  if (max_deriv <= zerotol) { // eq reached
-    eq_unreached=0;
-    // decrease the counter of eq to reach (/!\ double !)
-    remaining_eq = remaining_eq - 1.0;  
+  got_eq = eq_reached(neq, ydot_global, &eq_zerotol);
+  
+  if (got_eq) { // eq reached
+    eq_unreached = 0.0;
+    // decrease the counter of the max number of eq to reach (/!\ double !) 
+    // we stop the run when this counter gets to zero
+    remaining_eq = fmax(remaining_eq - 1.0, 0.0);  
   }
   
   // Put the return values where they belong
+//   Rprintf("%f | %f | \n", gout[0], gout[1]);
   gout[0] = eq_unreached;
   gout[1] = remaining_eq;
 }
@@ -93,7 +98,7 @@ void equilibrium(int *neq,
 /* We define here an event that will happen at a time specified in R */
 void spkill(int *n, double *t, double *y) { 
   // Modifies the system's state in place !
-  y[3] = 0; // OMG kill a top predator !!!
+  y[3] = y[3]/2; // OMG dead stuff
 }
 
 
@@ -102,26 +107,19 @@ void spkill(int *n, double *t, double *y) {
 /* This is the core function of the model that returns the 
  * partial derivatives */
 void derivs(int *neq,     // neq is the number of equations
-                double *t,    // value of the independent variable (time)
-                double *y,    // current state
-                double *ydot, // will contain the derivatives
-                double *yout, // vector with [nout values of other output variables] 
-                              // ++ [rpar values]
-                int *ip)      // [number of output vals, 
-                              //  length of yout,
-                              //  length of *ip]
+            double *t,    // value of the independent variable (time)
+            double *y,    // current state
+            double *ydot, // will contain the derivatives
+            double *yout, // vector with [nout values of other output variables] 
+                          // ++ [rpar values]
+            int *ip)      // [number of output vals, 
+                          //  length of yout,
+                          //  length of *ip]
 { 
   double funcresp=0; // functional response
   
   // Ensures correct memory allocation (we do not use nout so no need for it !)
   //   if (ip[0] < 1) error("nout should be at least 1");
-  
-  for (int i=0; i<*neq; i++) { 
-    if (ydot[i] <= zerotol) { 
-      ydot[i] = 0;
-    }
-  }
-  
   // Compute logistic growth for each species
   for (int i=0; i<*neq; i++) { 
     ydot[i] = p.r[i] * y[i] * (1 - y[i] / p.K[i]);
@@ -161,6 +159,17 @@ void derivs(int *neq,     // neq is the number of equations
   // Export ydot and compute some other stuff
   for (int i=0; i<*neq; i++) { 
     ydot_global[i] = ydot[i];
+  }
+  
+  // Set very small species abundances to zero
+  for (int i=0; i<*neq; i++) { 
+    
+    if (y[i] < zerotol) { 
+      // We set also ydot[i] to zero as numerical errors (?) make the population 
+      // recover 
+      ydot[i] = - y[i];
+    }
+    
   }
   
   // NB: there is no need to return anything: all the stuff is modified in place

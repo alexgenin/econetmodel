@@ -120,10 +120,10 @@ vecmat_switch <- function(thing, isvec, ismat, elsefun=stop) {
   } else if (is.matrix(thing)) { 
     return(ismat)
   } else { 
-    do.call(elsefun)
+    stop('Not a matrix or a vector, check input')
   }
 }
-  
+
 # Returns the output name of a template
 gen_output <- function(str) { 
   paste0(dirname(str), '/../', sub(".template","",basename(str)))

@@ -32,6 +32,7 @@ get_in_list2 <- function(name1,name2) {
 # Define the functions to access a system's data
 get_time             <- get_in_list ('time')
 get_timestep         <- get_in_list ('timestep')
+get_tmax             <- get_in_list ('tmax')
 get_state            <- get_in_list ('state')
 get_size             <- function(list) length(get_in_list('state')(list))
 get_parms            <- get_in_list ('parms')
