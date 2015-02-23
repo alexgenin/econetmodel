@@ -1,15 +1,6 @@
 # 
 # Functions that generate C code
 
-# Handles parameters before passing them to the C code. In particular, this 
-# allows correct filling of matrices (row-major (C) vs col-major (R))
-prepare_parameters <- function(parameters) { 
-  lapply(parameters, 
-         function(elem) 
-           vecmat_switch(elem, elem, as.vector(t(elem)))) %>%
-    unlist
-}
-
 # Generate c code given a template
 # Tags take the form [[template::<tag>]]
 gen_c_code <- function(parameters,         # System list

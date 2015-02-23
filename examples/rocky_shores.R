@@ -60,11 +60,11 @@ parameters <- list(
 
 # Compile and load c code
 clean_c_code("./src/templates/")
-gen_c_code(parameters, "./src/templates/rockyshore.c.template", overwrite=TRUE)
+gen_c_code(parameters, "./src/templates/rockyshore.c.template")
 document() # loads .so too
 
 # Define run variables
-times      <- seq(0,2000,l=1000)
+times      <- seq(0,1000,l=2000)
 parms      <- prepare_parameters(parameters)
 init.state <- rnorm(Nsp,.5,.1)
 names(init.state) <- paste0('node',seq.int(Nsp))
@@ -74,7 +74,7 @@ events     <- list(func='killspecies',
 system <- list(y=init.state,
                times=times,
                parms=parms,
-               func='rockyshore', 
+               func='derivs', 
                initfun="initmod",
                dllname='netmodr', 
                events=list(func='spkill',
