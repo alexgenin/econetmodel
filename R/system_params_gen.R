@@ -7,7 +7,7 @@ make.squaremat <- function(Nnodes) {
     matrix(vec, ncol=Nnodes, nrow=Nnodes, byrow=TRUE)
   }
 }
-  
+
 # Fills in a matrix of interactions given a table
 # table should be as follow : 
 #   [from] [to] [howmuch]
