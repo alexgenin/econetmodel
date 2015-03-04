@@ -11,35 +11,46 @@ create.system <- function(list, type='source') {
 
 # Compile a system
 compile.system <- function(system, 
-                           lib.name = as.character(substitute(system)),
-                           lib.dir  = "./src/",
-                           CCFLAGS="-Wall") { 
+                           cfile = NULL,
+                           lib.dir  = "./src/compiled_systems",
+                           include.dir = "./src/include",
+                           PKG_CFLAGS="-Wall") { 
   
   .check_if_system(system)
+  
+  # Get output c file
+  if (is.null(system[["cfile"]])) { 
+    cfile <- paste0(lib.dir,'/',as.character(substitute(system)),'.c')
+  } else { 
+    cfile <- system[["cfile"]]
+  }
   
   # Create a temporary directory
   if ( ! file.exists(lib.dir) ) dir.create(lib.dir)
   
-  # If already a compiled system, return the compiled system
-  if (inherits(system,'system') && inherits(system,'system.binary')) 
-    return(system)
-  
   # Generate c code
-  cfile <- paste0("./src/",lib.name,'.c')
   gen_c_code(get_parms(system), 
              get_template(system),
              output=cfile,
              overwrite=TRUE)
   
+  system[["cfile"]] <- cfile
+  dllname <- sub('.c','',basename(cfile), fixed=TRUE)
+  system[["solver_parms"]][["dllname"]] <- dllname
+  
   # Compile shared lib
-  output <- paste0(lib.dir,"/",sub('.c','',basename(cfile), fixed=TRUE),".so")
-  cmd <- paste0('CCFLAGS="',CCFLAGS, '" R CMD SHLIB ',cfile, " -o ",output)
+  output   <- paste0(lib.dir,"/",dllname,".so")
+  includes <- paste0(dir(include.dir, pattern=".c$", full.names=TRUE),collapse=' ')
+  cmd <- paste0('PKG_CFLAGS="',PKG_CFLAGS, ' -I ',include.dir,'"',
+                ' R CMD SHLIB ', 
+                includes, ' ',
+                cfile, " -o ", output)
   message(cmd)
   exit_code <- system(cmd)
   
   if (exit_code == 0) { 
     message('Loading shared object.')
-    document()
+    dyn.load(output)
   } else {
     file.remove(cfile)
     stop('Compilation failed.')
@@ -60,10 +71,4 @@ prepare_parameters <- function(parameters) {
   lapply(parameters, 
          function(elem) vecmat_switch(elem, elem, as.vector(t(elem)))) %>%
   unlist
-}
-
-# Checks
-.check_if_system <- function(system) { 
-  if (!inherits(system,'system')) 
-    stop(paste0('I do not know what to do with object of class ', class(system)))
 }

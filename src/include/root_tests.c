@@ -17,7 +17,6 @@ int eq_reached(int *neq,
   for (int i=0; i<*neq; i++) {
     max_deriv = fmaxf(max_deriv, fabs(ydot[i]));
   }
-  Rprintf("| %e | \n", max_deriv);
   
   if (max_deriv <= *zerotol) { 
     eq = 1;

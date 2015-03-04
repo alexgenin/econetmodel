@@ -73,14 +73,14 @@ mktag <- function(str) {
 gen_defines <- function(plist, collapser="\n") { 
   
   nspecies <- lapply(plist, function(x) vecmat_switch(x, length(x), ncol(x)))
-  nparams  <- Reduce(sum,lapply(plist, length))
+  nparams  <- Reduce(sum, lapply(plist, length))
   
-  if (length(unique(nspecies)) > 1) { 
+  # Tests if more than one length for nspecies
+  if (length(unique(nspecies)) > 2) { # this is not a good tests but can catch some errors
     stop('Parameters sizes mismatch')
   } else { 
     txt <- paste0("#define Nsp ", nspecies[[1]], "\n",
-                  "#define Np ",  nparams,       "\n",
-                  "static int staticNp = ",nparams, ";\n")
+                  "#define Np ",  nparams,       "\n")
   }
   return(txt)
 }
