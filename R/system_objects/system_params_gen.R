@@ -12,8 +12,8 @@ make.squaremat <- function(Nnodes) {
 # table should be as follow : 
 #   [from] [to] [howmuch]
 #     a     b       c  
-sysmat_fill <- function(links, Nnodes, fill=0, linkval.default=1, 
-                        mat=matrix(fill, ncol=Nnodes, nrow=Nnodes)) { 
+gen_interaction_matrix <- function(links, Nnodes, fill=0, linkval.default=1, 
+                                   mat=matrix(fill, ncol=Nnodes, nrow=Nnodes)) { 
   
   cols <- c('from','to')
   
