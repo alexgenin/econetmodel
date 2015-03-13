@@ -1,10 +1,10 @@
-# 
-# Full rockyshore model.
-#
+
 library(deSolve)
 library(magrittr)
 library(ggplot2)
 library(plyr)
+library(tidyr)
+library(rollply) # for grid-building functions
 
 # 
 # 4 producers
@@ -12,86 +12,102 @@ library(plyr)
 # 2 top predators
 # 
 # 
-
-# Define some parameters
-bodyms <- c(1,1,1,1,  10,10,  100,100)
-Nsp <- length(bodyms)
-
-# Define topology: who eats whom ?
-trophic_topology <- list(list(from=c(5,6), to=c(1,2,3,4)),
-                         list(from=c(7,8), to=c(5,6)))
-trophic_topology <- gen_interaction_matrix(trophic_topology, Nsp)
-
-# Generate 
-allometric_vars <- gen_allometric_system(bodyms, trophic_topology)
-
-# Comsumption rates
-ws <- t(apply(trophic_topology, 1, 
-              function(X) if (sum(X)>0) X/sum(X) else X))
-
-
-parameters <- alter_list(allometric_vars, 
-  list(
-    # Producers' logistic growth
-    # growth rate
-    r  = c(rep(1,4), rep(0,Nsp-4)),
-    # carrying capacities (always > 0 !)
-    K  = rep(1, Nsp),
-    # Consumption
-    # conversion efficiencies
-    e  = matrix(0.85, ncol=Nsp, nrow=Nsp), 
-    # consumption rates
-    w  = ws, 
-    # Removed species
-    removed_species = 4
-))
-
-# Set time series parameters
-time <- 0 
-timestep <- 4
-tmax <- 10e3L
-
-foodweb <- 
-  create.system(
-    list(time          = time,
-         timestep      = timestep,
-         tmax          = tmax,
-         state         = rep(max(parameters$K),Nsp),
-         parms         = parameters,
-         source        = list(template = './src/templates/rockyshore_full.c.template'),
-         solver_parms  = list(func     = 'derivs',
-                              initfunc = 'initmod', 
-                              events   = list(func = 'remove_species',
-                                              root = FALSE,
-                                              time = nearestEvent(2500, seq(0,tmax,by=timestep)),
-                                              terminalroot=2), # the root max nb of eq 
-                              nout     = 2,
-                              outnames = c("maxd","remaining_eq"),
-                              rootfunc = 'controlf',
-                              nroot    = 2,
-                              verbose  = FALSE)
-         ))
-
+foodweb <- syspreset_rockyshore(tmax=3000, 
+                                remove_species=FALSE) 
 foodweb.c <- compile.system(foodweb) # side-effects !
 
-# Define what one run is supposed to be
-do_onerun <- function(rundat, foodweb) { 
-  alter_system(foodweb, list(state=runif(Nsp,.001, 1))) %>% 
-    run %>% 
-    export(., gather.do=TRUE) 
+test_coexistence <- function(rundat, fw) { 
+  new.atk <- list(list(from=c(5,6), to=c(1,2,3,4), val=rundat[ ,'atk.gr']),
+                  list(from=c(7,8), to=c(5,6),     val=rundat[ ,'atk.tp']))
+  new.atk <- gen_interaction_matrix(new.atk, get_size(fw))
+  
+  fw %>%
+    alter_system(list(state=runif(get_size(fw),.001, 1))) %>% 
+    alter_parms(list(atk = new.atk)) %>%
+    run  %>% 
+    zero_below(1e-30) %>% 
+    (function(mat) { mat[mat[ ,1] > 2900 & mat[ ,1] < 3000, ] }) %>%
+#     select_range(2900,3000) %>%
+    adjust_names 
 }
 
-system.time(
-  rundat <- data.frame(id=seq.int(100))
+system.time({
+  rundat <- build_mesh_grid_identical(data.frame(atk.tp=c(0,2),
+                                                 atk.gr=c(0,2)),
+                                      1e3L)
+  rundat <- cbind(id=seq.int(nrow(rundat)), rundat)
+  
+  result <- ddply(rundat, names(rundat), 
+                  test_coexistence, foodweb.c, 
+                  .progress='none')
+})
+
+result %>% 
+  ddply(~ id, colMeans) %>%
+  mutate(producers = (sp1==0) + (sp2==0) + (sp3==0) + (sp4==0),
+         grazers   = (sp5==0) + (sp6==0),
+         consumers = (sp7==0) + (sp8==0)) ->
+  result.fmt 
+
+ggplot(gather(result.fmt, key=sp, value=ab, sp1:sp8)) +
+  geom_tile(aes(atk.gr, atk.tp, fill=ab)) + 
+  facet_wrap(~ sp) 
+
+gather(result.fmt,
+       key=Trophic_level, value=Extinctions, 
+       producers, grazers, consumers) %>% 
+  ggplot() +
+  geom_tile(aes(atk.gr, atk.tp, fill=as.factor(Extinctions))) + 
+  facet_grid( ~ Trophic_level)
+
+# Define what one run is supposed to be (fw is the foodweb object)
+do_onerun <- function(rundat, fw) { 
+  alter_system(fw, list(state=runif(Nsp,.001, 1))) %>% 
+    run  %>% 
+    zero_epsilon(., 1e-15) %>% 
+    adjust_names %>% 
+    select_ranges(., get_kept_output(fw)) %>% # becomes df at this step
+    gather(., key="sp",value="ab", sp1:sp8)  # <!todo!> do not hardcode colnames
+}
+
+system.time({
+  nruns <- 10000
+  rundat <- data.frame(id     = seq.int(nruns), 
+                       atk.gr = runif(nruns,0,2),
+                       atk.tp = runif(nruns,0,2))
   result <- ddply(rundat, names(rundat), 
                   do_onerun, foodweb.c, 
                   .progress='time')
-)
+})
 
-# Export results
-library(ggplot2)
-result.plot <- ggplot(result) + 
-                 geom_line(aes(time, ab, group=id), 
-                             alpha = .2, size = .7) + 
-                   facet_grid(sp ~ .)
-ggsave(plot=result.plot, filename="../output/plots/draft/test.png")
+
+# Show species timeseries excerpt
+ggplot(subset(result,range %in% c('b.before','c.removed'))) + 
+  geom_line(aes(time, ab, csolor=sp, linetype=as.factor(id))) + 
+  facet_grid(sp ~ range, scales='free_x') + 
+  scale_y_sqrt()
+
+# Analyse species abundances
+spab <- ddply(result, 
+              ~ id + range + sp + atk.gr + atk.tp, summarise,
+              ab.median = median(ab), 
+              .progress="time")
+
+ggplot(spab) + 
+  geom_line(aes(range, ab.median, group=paste(id)), alpha=.1) + 
+  facet_grid(~ sp) + 
+  scale_y_sqrt()
+
+extinctions <- ddply(spab, ~ id + range + atk.gr + atk.tp, 
+                     summarise, extinct = sum(ab.median == 0))
+ggplot(extinctions) + 
+  geom_line(aes(range, extinct, group=id), alpha=.2)
+
+  
+# ggplot(subset(result)) + 
+#   geom_density(aes(ab.mean, color=range)) + 
+#   facet_grid(sp ~ range, scales='free') 
+
+# ggsave(plot=result.plot, 
+#        filename="../output/plots/draft/test.png")
+

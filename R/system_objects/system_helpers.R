@@ -25,17 +25,3 @@ export <- function(result,
   
   return(df)
 }
-
-# Adds a name to the single digit columns of a deSolve result
-adjust_names <- function(result.names, 
-                         name.skel="sp") { 
-  nodecols <- is_nodecol(result.names)
-  result.names[nodecols] <- paste0(name.skel, result.names[nodecols])
-  
-  return(result.names)
-}
-
-# Currently tests if single digit
-is_nodecol <- function(current.names) { 
-  return( grepl('^[0-9]{1}$', current.names) )
-}

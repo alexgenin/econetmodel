@@ -150,16 +150,32 @@ void derivs(int *neq,     // neq is the number of equations
                           //  length of *ip]
 { 
   double funcresp=0; // functional response
+  double totalprod=0;
+  double K[*neq] = 
+  // 
+  
+  // Compute the realized K
+  for (int i=0; i<*neq; i++) { 
+    for (int j=0; i<*neq; i++) { 
+      K = 
+    }
+  }
   
   // Compute logistic growth for each species
+  // Total abundance of producers : they share the same space !
   for (int i=0; i<*neq; i++) { 
-    ydot[i] = p.r[i] * y[i] * (1 - y[i] / p.K[i]);
+    if (p.r[i] > 0) {
+      totalprod += y[i];    
+    }
+  }
+  
+  for (int i=0; i<*neq; i++) { 
+    ydot[i] = p.r[i] * y[i] * (1 - totalprod / K[i]);
   }
   
   // Compute effect of trophic interactions
   for (int i=0; i<*neq; i++) {
     for (int j=0; j<*neq; j++) {
-      
       
       // Species i eats j
       funcresp = frtype2(&y[j], &p.atk[i][j], &p.h[j]);
@@ -172,15 +188,18 @@ void derivs(int *neq,     // neq is the number of equations
     }
   }
   
+  
   // Mortality
   for (int i=0; i<*neq; i++) { 
     ydot[i] += - p.x[i] * y[i];
   }
   
+  
   // Export ydot and compute some other stuff
   for (int i=0; i<*neq; i++) { 
     ydot_global[i] = ydot[i];
   }
+  
   
   // Set very small species abundances to zero
   for (int i=0; i<*neq; i++) { 
@@ -191,11 +210,14 @@ void derivs(int *neq,     // neq is the number of equations
     }
   }
   
-  // Store max absolute derivative
+  
+  // Store some stuff for output
   for (int i=1; i<*neq; i++) {
     yout[0] = fmaxf(ydot[i-1], fabs(ydot[i]));
     yout[1] = remaining_eq;
+    yout[2] = 
   }
+  
   
   // NB: there is no need to return anything: all the stuff is modified in place
   // and [ydot]++[yout] is returned

@@ -1,20 +1,6 @@
 
 # A structure for a system type
 
-# Does nothing when document() is called but we have syntax colors in kate so 
-# its good
-quote(
-  system <- list( 
-      times         = double,
-      timestep      = double, 
-      state         = double[],
-      parms         = list(double [], ...), # only doubles !
-      source        = list(template = char[]),
-      solver_parms  = list(parms    = double[], # these are parameters that are accepted by runsteady
-                           ...), # all kinds of stuff
-      stability_status = int)
-)
-
 # Generic function to retrive stuff from a list or NULL !
 get_in_list <- function(name) { 
   function(system) { 
@@ -33,12 +19,14 @@ get_in_list2 <- function(name1,name2) {
 get_time             <- get_in_list ('time')
 get_timestep         <- get_in_list ('timestep')
 get_tmax             <- get_in_list ('tmax')
+get_rtime            <- get_in_list ('removal_time')
 get_state            <- get_in_list ('state')
 get_size             <- function(list) length(get_in_list('state')(list))
 get_parms            <- get_in_list ('parms')
 get_solver_parms     <- get_in_list ('solver_parms')
 get_template         <- get_in_list2('source','template')
 get_stability_status <- get_in_list ('stability_status')
+get_kept_output      <- get_in_list('kept_output')
 
 # Set the compiled form for parameters
 set_compiled_parms <- function(system,parms) { 
