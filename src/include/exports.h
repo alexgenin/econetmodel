@@ -4,11 +4,12 @@
 #define NETMODR_EXPORTS
 
 // Functional response(s)
-double frhill(double prey, 
-              double total_prey, 
-              double atk, 
-              double h,
-              double q);
+double frhill(double *prey, 
+              double *total_prey, 
+              double *atk, 
+              double *w, 
+              double *h,
+              double *q);
 
 // Safe pow() for negative numbers (see .c file)
 double pow2(double x, 

@@ -15,12 +15,6 @@ syspreset_rockyshore <- function(tmax, remove_species=FALSE) {
   # Generate 
   allometric_vars <- gen_allometric_system(bodyms, trophic_topology)
   
-  # We choose specific values for atk as allometry does not work so well here
-  # for coexistence.
-  new.atk <- list(list(from=c(5,6), to=c(1,2,3,4), val=.5),
-                  list(from=c(7,8), to=c(5,6),     val=.75))
-  new.atk <- gen_interaction_matrix(new.atk, Nsp)
-  
   # Comsumption rates
   ws <- t(apply(trophic_topology, 1, 
                 function(X) if (sum(X)>0) X/sum(X) else X))
@@ -38,9 +32,7 @@ syspreset_rockyshore <- function(tmax, remove_species=FALSE) {
                                 # consumption rates
                                 w  = ws,
                               # Functional response [0,1]
-                                q  = .5,
-                              # New attack rates 
-                                atk = new.atk), 
+                                q  = .5), 
                               list(
                               # Species to remove
                                 removed_species = 5

@@ -1,10 +1,11 @@
 #include <R.h>
 #include <exports.h>
-#include <math.h> // for fmax, round
-#include <float.h> // for float limits
+#include <math.h>  // for fmax, round
+#include <float.h> // for double/float limits
 
 #define min_step_btw_root 5
 #define remaining_eq_value  2.0 // max number of eqs to consider
+#define dbg 1 // debug ?
 
 /* The template processing in R will produce two #define macros here for : 
  *   - Nsp : the number of species (equal to Nsp in the solver function)
@@ -12,26 +13,22 @@
  */
 // [[template::defines]]
 
-// Print debug messages ?
 static double eq_zerotol = 1e-30; // max derivs value to consider eq
 static double zerotol = 1e-10;    // min abundance of a species
 int steps_since_root;  // min number of evaluations to consider 
                        // btw two equilibrium
 
-/*
- * Note: C STORES ARRAYS IN ROW-MAJOR ORDER !!!
- */
-
+// Note: C STORES ARRAYS IN ROW-MAJOR ORDER !!!
 
 /* We pass all our parameters as a big array of doubles. For convenience we 
  * define here a union/struct that allows referring to them as p.<name> so 
  * the code is much more readable. 
  * 
  * Same thing here, the tag will be replaced by the actual values of the 
- * parameters.
+ * parameters. 
  */
 union parms { 
-  struct {  
+  struct { 
     // [[template::declarations]]
   };
   double value[Np];
@@ -142,9 +139,7 @@ void remove_species(int *n, double *t, double *y) {
   // We use a long integer because there is no double -> int rounding function,
   // but it seems to work the same as far as indexing is concerned.
   long int which_species = lrint(p.removed_species) - 1;
-  Rprintf("Removing species %e \n", p.removed_species + 1);
-  Rprintf("Removing species %i \n", which_species + 1);
-  
+  // Rprintf("Removing species %i", which_species + 1);
   y[which_species] = 0.0; // OMG dead stuff
 }
 
@@ -163,15 +158,14 @@ void derivs(int *neq,     // neq is the number of equations
                           //  length of yout,
                           //  length of *ip]
 { 
-  double funcresp=0; // functional response
+  double funcresp = 0; // functional response
   
-    
   // Compute the total biomass of preys available to each species
-  double sum_preys[Nsp];
+  double sum_preysatk[Nsp];
   for (int i=0; i<Nsp; i++) {
-    sum_preys[i] = 0;
+    sum_preysatk[i] = 0;
     for (int j=0; j<Nsp; j++) {
-      sum_preys[i] += p.atk[i][j] * pow2(y[j], p.q);
+      sum_preysatk[i] += p.atk[i][j] * pow2(y[j], p.q);
     }
   }
   
@@ -179,11 +173,12 @@ void derivs(int *neq,     // neq is the number of equations
   for (int i=0; i<Nsp; i++) { 
     
     if (is_extant[i]) { 
-      // Note: is_extant guarantees that y[i] > 0
       
-      // Logistic growth
+      // Note: is_extant[i] guarantees y[i] > 0 so pow() uses inside are safe.
+      if(dbg) Rprintf("sp%i:\n", i);
+      
+      // Intrinsic logistic growth
       ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / p.K[i] );
-      
       
       // Interactions
       for (int j=0; j<Nsp; j++) {
@@ -192,28 +187,37 @@ void derivs(int *neq,     // neq is the number of equations
         if ( is_extant[j] ) { 
           
           // Species i eats j
-          funcresp = frhill(y[j], sum_preys[i], p.atk[i][j], p.h[j], p.q);
-          ydot[i] += y[i] * p.w[i][j] * funcresp;
+          funcresp = frhill(&y[j], &sum_preysatk[i], 
+                            &p.w[i][j], &p.atk[i][j], 
+                            &p.h[j], &p.q);
+          
+          ydot[i] += y[i] * funcresp * p.e[j][i];
+          
+          if(dbg) Rprintf("eat%i:%e ", j, y[i] * funcresp * p.e[j][i]);
+          
           
           // Species i gets eaten by j
-          funcresp = frhill(y[i], sum_preys[j], p.atk[j][i], p.h[i], p.q);
-          ydot[i] += - y[j] * p.w[j][i] * funcresp / p.e[j][i];
+          funcresp = frhill(&y[i], &sum_preysatk[j], 
+                            &p.w[j][i], &p.atk[j][i], 
+                            &p.h[i], &p.q);
+          ydot[i] += - y[j] * funcresp; 
           
+          if(dbg) Rprintf("get%i:%e ", j,  - y[j] * funcresp);
+          
+          if(dbg) Rprintf("\n");
         }
       }
       
-      
       // Mortality
       ydot[i] += - p.x[i] * y[i];
+      if(dbg) Rprintf("mor: %e\n", -p.x[i] * y[i]);
+      if(dbg) Rprintf("=> %e \n", ydot[i]);
+      if(dbg) Rprintf("\n");
       
       
-    } else { // -- end is_extant
-      // if extinct, then make it converge very close to zero
-      if (fabs(y[i]) >= eq_zerotol) { 
-        ydot[i] = - y[i];
-      } else { 
-        ydot[i] = 0.0;
-      }
+    } else { // -- end i is_extant
+      // extinct, then we do not change its abundance
+      ydot[i] = 0.0;
     }
   }
   
