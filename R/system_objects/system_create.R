@@ -52,7 +52,7 @@ compile.system <- function(system,
     message('Loading shared object.')
     dyn.load(output)
   } else {
-    file.remove(cfile)
+    # file.remove(cfile)
     stop('Compilation failed.')
   }
   

@@ -12,7 +12,7 @@ library(rollply) # for grid-building functions
 # 2 top predators
 # 
 # 
-foodweb <- syspreset_rockyshore(tmax=3000, 
+foodweb <- syspreset_rockyshore(tmax=300, 
                                 remove_species=FALSE) 
 foodweb.c <- compile.system(foodweb) # side-effects !
 
@@ -71,7 +71,7 @@ do_onerun <- function(rundat, fw) {
 }
 
 system.time({
-  nruns <- 10000
+  nruns <- 100
   rundat <- data.frame(id     = seq.int(nruns), 
                        atk.gr = runif(nruns,0,2),
                        atk.tp = runif(nruns,0,2))

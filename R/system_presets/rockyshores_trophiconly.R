@@ -1,6 +1,6 @@
-
+# 
 # Generate a trophic_only system
-
+# 
 syspreset_rockyshore <- function(tmax, remove_species=FALSE) { 
   
   # Define some parameters
@@ -14,34 +14,44 @@ syspreset_rockyshore <- function(tmax, remove_species=FALSE) {
   
   # Generate 
   allometric_vars <- gen_allometric_system(bodyms, trophic_topology)
-
+  
+  # We choose specific values for atk as allometry does not work so well here
+  # for coexistence.
+  new.atk <- list(list(from=c(5,6), to=c(1,2,3,4), val=.5),
+                  list(from=c(7,8), to=c(5,6),     val=.75))
+  new.atk <- gen_interaction_matrix(new.atk, Nsp)
+  
   # Comsumption rates
   ws <- t(apply(trophic_topology, 1, 
                 function(X) if (sum(X)>0) X/sum(X) else X))
 
   parameters <- alter_list(allometric_vars, 
-                          c(list(
-                            # Producers' logistic growth
-                              # growth rate
-                              r  = c(rep(1,4), rep(0,Nsp-4)),
-                              # carrying capacities (always > 0 !)
-                              K  = rep(1, Nsp),
-                            # Consumption
-                              # conversion efficiencies
-                              e  = matrix(0.85, ncol=Nsp, nrow=Nsp), 
-                              # consumption rates
-                              w  = ws), 
-                            list(
-                            # Species to remove
-                              removed_species = 5
-                            )
-                          ))
+                            c(list(
+                              # Producers' logistic growth
+                                # growth rate
+                                r  = c(rep(1,4), rep(0,Nsp-4)),
+                                # carrying capacities (always > 0 !)
+                                K  = rep(1, Nsp),
+                              # Consumption
+                                # conversion efficiencies
+                                e  = matrix(0.85, ncol=Nsp, nrow=Nsp), 
+                                # consumption rates
+                                w  = ws,
+                              # Functional response [0,1]
+                                q  = .5,
+                              # New attack rates 
+                                atk = new.atk), 
+                              list(
+                              # Species to remove
+                                removed_species = 5
+                              )
+                            ))
   
   # Set time series parameters
   time <- 0 
   timestep <- 1
   removal_time <- 3000
-
+  
   event <- NULL
   if (remove_species) { 
     event <- list(func = 'remove_species',
@@ -66,6 +76,7 @@ syspreset_rockyshore <- function(tmax, remove_species=FALSE) {
                               events   = event,
                               nout     = 1,
                               outnames = c("extinct"),
+#                               maxstep = 10e6, # non-default value not recommended
 #                               rootfunc = 'controlf',
 #                               nroot    = 2,
                               verbose  = FALSE)

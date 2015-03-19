@@ -12,9 +12,7 @@ static double eq_zerotol = 1e-30; // max derivs value to consider eq
 static int    steps_since_root = min_step_btw_root;  // min number of evaluations to consider 
                                                      // btw two equilibrium
 
-/*
- * Note: C STORES ARRAYS IN ROW-MAJOR ORDER !!!
-*/
+// Note: C STORES ARRAYS IN ROW-MAJOR ORDER !!!
 
 /* The template processing in R will produce two #define macros here for : 
  *   - Nsp : the number of species (equal to *neq in the solver function)
@@ -131,6 +129,7 @@ void remove_species(int *n, double *t, double *y) {
   long int which_species = lrint(p.removed_species[0]) - 1;
 //   Rprintf("Removing species %i \n", which_species + 1);
   
+  Rprintf("Removed %i\n", which_species);
   y[which_species] = 0.; // OMG dead stuff
 }
 
@@ -178,11 +177,11 @@ void derivs(int *neq,     // neq is the number of equations
     for (int j=0; j<*neq; j++) {
       
       // Species i eats j
-      funcresp = frtype2(&y[j], &p.atk[i][j], &p.h[j]);
+      funcresp = frtype3(&y[j], &p.atk[i][j], &p.h[j]);
       ydot[i] += y[i] * p.w[i][j] * funcresp;
       
       // Species i gets eaten by j
-      funcresp = frtype2(&y[i], &p.atk[j][i], &p.h[i]);
+      funcresp = frtype3(&y[i], &p.atk[j][i], &p.h[i]);
       ydot[i] += - y[j] * p.w[j][i] * funcresp / p.e[j][i];
       
     }

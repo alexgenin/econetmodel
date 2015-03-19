@@ -1,22 +1,24 @@
 
 #include <R.h>
+#include <exports.h> //pow
 
-// This file contains functional responses
-// #include "./include/functional_response.h"
-
-
-// Given two species, get the functional response value of the interaction i->j
-// This is a type 2 functional response of the form  : 
-// F = aR / (1+ahR)
-double frtype2(double *prey,    // abundance of ressource (pointer)
-               double *atk,     // attack rate            (pointer)
-               double *h) {     // handling time          (pointer)
+// Hill type functional response (allows for intermediate func responses between 
+// 2 (q=0) and 3 (q=1)).
+// Fr = aR^(1+q) / ( 1 + ahR^(1+q) )
+double frhill(double prey, 
+              double total_prey, 
+              double atk, 
+              double h,
+              double q) { 
+  
+  /* Note: we use pow here, although there is no guarantee that prey or 
+  /* total_prey are non-negative, in which case pow returns NaN. It is up to 
+   * the calling function to check for this. 
+   */
   
   double fr = 0;
-  
-  fr = (*prey * *atk) / (1 + (*h * *prey * *atk));
-  
-//   Rprintf("%f | %f \n", *prey, fr); // dbg
+  fr = atk * pow(prey, 1.0 + q) / 
+         (1 + (h * atk * pow(total_prey, 1.0 + q)));
   
   return fr;
 }
