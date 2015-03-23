@@ -11,7 +11,7 @@ create.system <- function(list, type='source') {
 
 # Compile a system
 compile.system <- function(system, 
-                           cfile = NULL,
+                           output_cfile = "last_run",
                            lib.dir  = "./src/compiled_systems",
                            include.dir = "./src/include",
                            PKG_CFLAGS="-Wall") { 
@@ -19,11 +19,7 @@ compile.system <- function(system,
   .check_if_system(system)
   
   # Get output c file
-  if (is.null(system[["cfile"]])) { 
-    cfile <- paste0(lib.dir,'/',as.character(substitute(system)),'.c')
-  } else { 
-    cfile <- system[["cfile"]]
-  }
+  output_cfile <- paste0(lib.dir,'/',as.character(output_cfile),'.c')
   
   # Create a temporary directory
   if ( ! file.exists(lib.dir) ) dir.create(lib.dir)
@@ -31,28 +27,29 @@ compile.system <- function(system,
   # Generate c code
   gen_c_code(get_parms(system), 
              get_template(system),
-             output=cfile,
+             output=output_cfile,
              overwrite=TRUE)
   
-  system[["cfile"]] <- cfile
-  dllname <- sub('.c','',basename(cfile), fixed=TRUE)
+  system[["cfile"]] <- output_cfile
+  dllname <- sub('.c','',basename(output_cfile), fixed=TRUE)
   system[["solver_parms"]][["dllname"]] <- dllname
   
   # Compile shared lib
-  output   <- paste0(lib.dir,"/",dllname,".so")
+  output_so   <- paste0(lib.dir,"/",dllname,".so")
   includes <- paste0(dir(include.dir, pattern=".c$", full.names=TRUE),collapse=' ')
+  
   cmd <- paste0('PKG_CFLAGS="',PKG_CFLAGS, ' -I ',include.dir,'"',
                 ' R CMD SHLIB ', 
                 includes, ' ',
-                cfile, " -o ", output)
+                output_cfile, " -o ", output_so)
   message(cmd)
   exit_code <- system(cmd)
   
   if (exit_code == 0) { 
     message('Loading shared object.')
-    dyn.load(output)
+    dyn.load(output_so)
   } else {
-    # file.remove(cfile)
+    # file.remove(output_cfile)
     stop('Compilation failed.')
   }
   

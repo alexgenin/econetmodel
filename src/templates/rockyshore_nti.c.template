@@ -1,25 +1,24 @@
 #include <R.h>
 #include <exports.h>
 #include <math.h> // for fmax, round
+#include <float.h> // for float limits
 
-#define min_step_btw_root 5;
-#define remaining_eq_value  2.0;
-
-// Print debug messages ?
-static int dbg = 0;
-static double zerotol = 1e-8;     // minimum abundance of a species
-static double eq_zerotol = 1e-30; // max derivs value to consider eq
-static int    steps_since_root = min_step_btw_root;  // min number of evaluations to consider 
-                                                     // btw two equilibrium
-
-// Note: C STORES ARRAYS IN ROW-MAJOR ORDER !!!
+#define min_step_btw_root 5
+#define remaining_eq_value  2.0 // max number of eqs to consider
 
 /* The template processing in R will produce two #define macros here for : 
- *   - Nsp : the number of species (equal to *neq in the solver function)
+ *   - Nsp : the number of species (equal to Nsp in the solver function)
  *   - Np  : the number of parameters 
  */
-
 // [[template::defines]]
+
+// Print debug messages ?
+static double eq_zerotol = 1e-30; // max derivs value to consider eq
+static double zerotol = 1e-10;    // min abundance of a species
+int steps_since_root;  // min number of evaluations to consider 
+                       // btw two equilibrium
+
+// Note: C STORES ARRAYS IN ROW-MAJOR ORDER !!!
 
 /* We pass all our parameters as a big array of doubles. For convenience we 
  * define here a union/struct that allows referring to them as p.<name> so 
@@ -47,7 +46,7 @@ double ydot_global[Nsp];
  * stored a double, but deSolve provides correct handling for floating point
  * errors.
  */
-double remaining_eq = remaining_eq_value;
+double remaining_eq;
 
 /* Same thing here, we need to have the parameters globally available. This 
  * function (provided by deSolve) takes care of this.
@@ -56,9 +55,12 @@ double remaining_eq = remaining_eq_value;
  */
 void initmod(void (* odeparms)(int *, double *)) {
   // Reset global values
-  remaining_eq  = remaining_eq_value;
+  remaining_eq     = remaining_eq_value;
   steps_since_root = min_step_btw_root;
-  memset(ydot_global, 1, sizeof(ydot_global)); // non-zero the derivatives on start
+  
+  // non-zero the derivatives on start so there is no equilibrium detected
+  // on step 1
+  memset(ydot_global, 1, sizeof(ydot_global)); 
   
   // Copy params values into correct array
   int N=Np;
@@ -81,8 +83,8 @@ void controlf(int *neq,
   // before, the solver will find a root on the first step (where we stopped
   // last time). We thus set gout value to a default before considering 
   // whether or not we have roots.
-  gout[0] = 1.; 
-  gout[1] = 1.; 
+  gout[1] = 1.0; 
+  gout[0] = 1.0; 
   
   // We store the maximum derivative in gout[0] and the number of roots. Do not
   // set to 0 (otherwise there will be a false equilibirum detected on step 1)
@@ -111,7 +113,7 @@ void controlf(int *neq,
       steps_since_root = min_step_btw_root; // reset root interval
     }
   }
-
+  
   // Put the return values where they belong
   gout[0] = eq_unreached;
   gout[1] = remaining_eq;
@@ -126,11 +128,11 @@ void remove_species(int *n, double *t, double *y) {
   
   // Note the -1 to adjust for R indexing and the rintf to cast 
   // p.removed_species to an integer.
-  long int which_species = lrint(p.removed_species[0]) - 1;
-//   Rprintf("Removing species %i \n", which_species + 1);
+  // We use a long integer because there is no double -> int rounding function,
+  // but it seems to work the same as far as indexing is concerned.
+  long int which_species = lrint(p.removed_species) - 1;
   
-  Rprintf("Removed %i\n", which_species);
-  y[which_species] = 0.; // OMG dead stuff
+  y[which_species] = 0.0; // OMG dead stuff
 }
 
 
@@ -147,77 +149,100 @@ void derivs(int *neq,     // neq is the number of equations
             int *ip)      // [number of output vals, 
                           //  length of yout,
                           //  length of *ip]
-{ 
-  double funcresp=0; // functional response
-  double totalprod=0;
-  double K[*neq] = 
-  // 
+{   
+  int is_extant[Nsp];
+  double Knt = 0;
+  double K = 0;
+  double sumpreyatk = 0;
+  double F[Nsp][Nsp]; 
   
-  // Compute the realized K
-  for (int i=0; i<*neq; i++) { 
-    for (int j=0; i<*neq; i++) { 
-      K = 
+  
+  
+  // Get species extinction statuses
+  for (int i=0; i<Nsp; i++) { 
+    is_extant[i] = 1;
+    if ( y[i] < zerotol ) { 
+      is_extant[i] = 0;
     }
   }
   
-  // Compute logistic growth for each species
-  // Total abundance of producers : they share the same space !
-  for (int i=0; i<*neq; i++) { 
-    if (p.r[i] > 0) {
-      totalprod += y[i];    
+  
+  
+  // Compute functional responses between all species
+  for (int i=0; i<Nsp; i++) { 
+    // Compute the total biomass of preys available to species i * atk 
+    // coefficient
+    sumpreyatk = 0;
+    for (int j=0; j<Nsp; j++) {
+      if (is_extant[j]) {
+        sumpreyatk += p.atk[i][j] * pow(y[j], p.q);
+      }
+    }
+    
+    // Fill functional responses array
+    for (int j=0; j<Nsp; j++) { 
+      F[i][j] = frhill(&y[j], &sumpreyatk, 
+                       &p.atk[i][j], &p.w[i][j], &p.h[j], 
+                       &p.q);
     }
   }
   
-  for (int i=0; i<*neq; i++) { 
-    ydot[i] = p.r[i] * y[i] * (1 - totalprod / K[i]);
-  }
   
-  // Compute effect of trophic interactions
-  for (int i=0; i<*neq; i++) {
-    for (int j=0; j<*neq; j++) {
+  /* Main pop dynamics loop */
+  for (int i=0; i<Nsp; i++) { 
+    
+    if (is_extant[i]) { 
       
-      // Species i eats j
-      funcresp = frtype3(&y[j], &p.atk[i][j], &p.h[j]);
-      ydot[i] += y[i] * p.w[i][j] * funcresp;
+      /* Compute logistic growth
+       * -------------------- */
       
-      // Species i gets eaten by j
-      funcresp = frtype3(&y[i], &p.atk[j][i], &p.h[i]);
-      ydot[i] += - y[j] * p.w[j][i] * funcresp / p.e[j][i];
+      // Compute the true K[i] value as a result of non-trophic interactions
+      K = p.K0[i];
+      for (int j=0; j<Nsp; j++) { 
+        // We pass the links as a bonus/malus: we need to convert to absolute 
+        // values in the rational function. p.y0 is the typical biomass of i
+        if ( is_extant[j] && p.dK[j][i] > 0 ) { // if species j interacts with our focus sp i 
+          Knt = p.K0[i] + p.dK[j][i];
+          K += (Knt * y[i] + p.K0[i] * p.y0[i] ) / ( y[i] + p.y0[i] );
+        }
+      }
       
-    }
+      ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / K );
+      
+      
+      
+      /* Trophic interactions
+       * -------------------- */
+      
+      // Interactions
+      for (int j=0; j<Nsp; j++) {
+        
+        // If species j is still alive, then we interact with it.
+        if ( is_extant[j] ) { 
+          
+          // Species i eats j
+          ydot[i] += y[i] * p.e[j][i] * F[i][j];
+          
+          // Species i gets eaten by j
+          ydot[i] += - y[j] * F[j][i];
+          
+        }
+      }
+      
+      
+      /* Mortality 
+       * --------- */
+      ydot[i] += - p.x[i] * y[i];
+      
+  } else { // -- end is_extant
+    // if extinct, then do not modify species abundance
+    ydot[i] = 0.0;
   }
   
+  // Export ydot to other functions
+  // ydot_global[i] = ydot[i];
   
-  // Mortality
-  for (int i=0; i<*neq; i++) { 
-    ydot[i] += - p.x[i] * y[i];
-  }
-  
-  
-  // Export ydot and compute some other stuff
-  for (int i=0; i<*neq; i++) { 
-    ydot_global[i] = ydot[i];
-  }
-  
-  
-  // Set very small species abundances to zero
-  for (int i=0; i<*neq; i++) { 
-    if (y[i] < zerotol) { 
-      // We set also ydot[i] to zero as numerical errors (?) make the population 
-      // recover 
-      ydot[i] = - y[i];
-    }
-  }
-  
-  
-  // Store some stuff for output
-  for (int i=1; i<*neq; i++) {
-    yout[0] = fmaxf(ydot[i-1], fabs(ydot[i]));
-    yout[1] = remaining_eq;
-    yout[2] = 
-  }
-  
+  } // -- end loop on i
   
   // NB: there is no need to return anything: all the stuff is modified in place
-  // and [ydot]++[yout] is returned
 }

@@ -106,7 +106,7 @@ gen_onedeclaration <- function(parm.name, parm.value) {
 # ------------------------------------------
 gen_size_qualifier <- function(elem) { 
   if (length(elem) == 1 ) {
-    return("")
+    return("") # nothing: element is passed as double
   } else { 
     vecmat_switch(elem, "[Nsp]", "[Nsp][Nsp]")
   }

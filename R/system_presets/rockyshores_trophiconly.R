@@ -74,11 +74,7 @@ syspreset_rockyshore <- function(tmax, remove_species=FALSE) {
          solver_parms  = list(func     = 'derivs',
                               initfunc = 'initmod', 
                               events   = event,
-                              nout     = 1,
-                              outnames = c("extinct"),
-#                               maxstep = 10e6, # non-default value not recommended
-#                               rootfunc = 'controlf',
-#                               nroot    = 2,
+                              nout     = 0,
                               verbose  = FALSE)
          ))
   

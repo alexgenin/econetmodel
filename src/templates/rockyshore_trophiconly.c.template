@@ -142,14 +142,12 @@ void remove_species(int *n, double *t, double *y) {
   // We use a long integer because there is no double -> int rounding function,
   // but it seems to work the same as far as indexing is concerned.
   long int which_species = lrint(p.removed_species) - 1;
-  Rprintf("Removing species %e \n", p.removed_species + 1);
-  Rprintf("Removing species %i \n", which_species + 1);
   
   y[which_species] = 0.0; // OMG dead stuff
 }
 
 
-
+  
 
 /* This is the core function of the model that returns the 
  * partial derivatives */
@@ -165,13 +163,11 @@ void derivs(int *neq,     // neq is the number of equations
 { 
   double funcresp=0; // functional response
   
-    
-  // Compute the total biomass of preys available to each species
-  double sum_preys[Nsp];
-  for (int i=0; i<Nsp; i++) {
-    sum_preys[i] = 0;
-    for (int j=0; j<Nsp; j++) {
-      sum_preys[i] += p.atk[i][j] * pow2(y[j], p.q);
+  
+  // Get species extinction status
+  for (int i=0; i<Nsp; i++) { 
+    if ( is_extant[i] && y[i] < zerotol ) { 
+      is_extant[i] = 0;
     }
   }
   
@@ -179,7 +175,13 @@ void derivs(int *neq,     // neq is the number of equations
   for (int i=0; i<Nsp; i++) { 
     
     if (is_extant[i]) { 
-      // Note: is_extant guarantees that y[i] > 0
+      // Note: is_extant[i] guarantees that y[i] > 0 so using 
+      
+      // Compute the total biomass of preys available to species i 
+      double sumpreyatk = 0;
+      for (int j=0; j<Nsp; j++) {
+        sumpreyatk += p.atk[i][j] * pow2(y[j], p.q);
+      }
       
       // Logistic growth
       ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / p.K[i] );
@@ -192,12 +194,16 @@ void derivs(int *neq,     // neq is the number of equations
         if ( is_extant[j] ) { 
           
           // Species i eats j
-          funcresp = frhill(y[j], sum_preys[i], p.atk[i][j], p.h[j], p.q);
-          ydot[i] += y[i] * p.w[i][j] * funcresp;
+          funcresp = frhill(y[j], sumpreyatk, 
+                            p.atk[i][j], p.w[i][j], 
+                            p.h[j], p.q);
+          ydot[i] += y[i] * p.e[j][i] * funcresp;
           
           // Species i gets eaten by j
-          funcresp = frhill(y[i], sum_preys[j], p.atk[j][i], p.h[i], p.q);
-          ydot[i] += - y[j] * p.w[j][i] * funcresp / p.e[j][i];
+          funcresp = frhill(y[i], sumpreyatk, 
+                            p.atk[j][i], p.w[j][i], p.h[i], 
+                            p.q);
+          ydot[i] += - y[j] * funcresp;
           
         }
       }
@@ -209,24 +215,13 @@ void derivs(int *neq,     // neq is the number of equations
       
     } else { // -- end is_extant
       // if extinct, then make it converge very close to zero
-      if (fabs(y[i]) >= eq_zerotol) { 
-        ydot[i] = - y[i];
-      } else { 
-        ydot[i] = 0.0;
-      }
+      ydot[i] = 0.0;
     }
   }
   
   // Export ydot to other functions
   for (int i=0; i<Nsp; i++) { 
     ydot_global[i] = ydot[i];
-  }
-  
-  // Update species extinction status
-  for (int i=0; i<Nsp; i++) { 
-    if ( is_extant[i] && y[i] < zerotol ) { 
-      is_extant[i] = 0;
-    }
   }
   
   // Store number of extinct species
