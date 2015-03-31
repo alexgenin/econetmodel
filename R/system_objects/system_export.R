@@ -1,7 +1,29 @@
 # 
 # Functions that take a system object and return understandable stuff
 # 
+
+# Insert the parameters as columns in the output matrix
+insert_parms <- function(result, ..., sys=attr(result,"system")) { 
   
+  
+  # Get params from system
+  parms <- get_parms(sys)
+  to_insert <- as.list(match.call(expand.dots=FALSE))[["..."]] 
+  
+  # Parse unevaled to_insert to add names
+  to_insert_names <- unlist(lapply(to_insert, deparse))
+  to_insert_names <- to_insert_names %>% 
+                       gsub('[[:punct:]_]', '', .) %>%
+                       gsub(' ', '', .)
+  
+  to_insert <- lapply(to_insert, eval, envir=parms)
+  names(to_insert) <- to_insert_names
+  
+  # Select and bind subsets of parms
+  do.call(cbind, c(list(result),to_insert)) 
+  
+}
+
 # Select time range(s) (so unreadable)
 select_ranges_ <- function(result, time_ranges) { 
   time_ranges %>%

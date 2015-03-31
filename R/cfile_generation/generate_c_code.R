@@ -77,13 +77,9 @@ gen_defines <- function(plist, collapser="\n") {
   nspecies <- lapply(plist, function(x) vecmat_switch(x, length(x), ncol(x)))
   nparams  <- Reduce(sum, lapply(plist, length))
   
-  # Tests if more than one length for nspecies
-  if (length(unique(nspecies)) > 2) { # this is not a good tests but can catch some errors
-    stop('Parameters sizes mismatch')
-  } else { 
-    txt <- paste0("#define Nsp ", nspecies[[1]], "\n",
-                  "#define Np ",  nparams,       "\n")
-  }
+  txt <- paste0("#define Nsp ", nspecies[[1]], "\n",
+                "#define Np ",  nparams,       "\n")
+  
   return(txt)
 }
 
@@ -95,7 +91,7 @@ gen_declarations <- function(plist) {
                          names(plist),
                          plist)
   
-  paste(declarations,collapse="\n")
+  paste(declarations, collapse="\n")
 }
 gen_onedeclaration <- function(parm.name, parm.value) {
   paste0('double ', parm.name, 
@@ -105,11 +101,9 @@ gen_onedeclaration <- function(parm.name, parm.value) {
 # Utils 
 # ------------------------------------------
 gen_size_qualifier <- function(elem) { 
-  if (length(elem) == 1 ) {
-    return("") # nothing: element is passed as double
-  } else { 
-    vecmat_switch(elem, "[Nsp]", "[Nsp][Nsp]")
-  }
+    vecmat_switch(elem, 
+                  paste0("[", length(elem),"]"),
+                  paste0("[", nrow(elem),  "]", "[", ncol(elem),"]"))
 }
 
 # Checks if an element is a matrix or a vector or else

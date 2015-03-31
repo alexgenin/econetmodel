@@ -2,10 +2,9 @@
 # Returns a set of default parameters
 # 
 
-default_trophic_parms <- function(...) { 
+default_trophic_parms <- function(bodyms) { 
   
   # Body masses and number of species
-  bodyms <- c(1,1,1,1, 3,3, 6,6)
   Nsp <- length(bodyms)
   
   # Define topology: who eats whom ?
@@ -17,7 +16,7 @@ default_trophic_parms <- function(...) {
   allometric_vars <- gen_allometric_system(bodyms, trophic_topology)
   
   # Generate K and dK
-  K0 <- rep(1,Nsp)
+  K0 <- rep(1, Nsp)
   
   # Comsumption rates
   ws <- t(apply(trophic_topology, 1, 

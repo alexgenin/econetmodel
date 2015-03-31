@@ -1,35 +1,25 @@
 # 
 # Generate a trophic_only system
 # 
-syspreset_rockyshore_nti <- function(tmax, 
-                                     remove_species=FALSE) { 
-  Nsp <- 8
+syspreset_rockyshore_nti <- function(tmax) { 
+  bodyms <- c(1,1,1,1, 3,3, 6,6)
+  Nsp <- length(bodyms)
   
   # Generate K and dK
-  dK <- list(list(from=5, to=c(1,2,3,4), val=.3))
+  dK <- list(list(from=5, to=c(1,2,3,4), val=.5))
   dK <- gen_interaction_matrix(dK, Nsp)
   
-  parameters <- alter_list_(default_trophic_parms(), 
-                              list(
-                                # NT bonus/malus on carrying capacity
-                                dK = dK,
-                                # Species to remove
-                                removed_species = 5
-                              )
-                            )
+  parameters <- alter_list(default_trophic_parms(bodyms), 
+                           dK = dK,
+                           # We default to not removing species but these parameters
+                           # need to be set so the C code works
+                           removed_species_total=0,
+                           removed_species=0)
   
   # Set time series parameters
   time <- 0 
   timestep <- 2
   removal_time <- 3000
-  
-  event <- NULL
-  if (remove_species) { 
-    event <- list(func = 'remove_species',
-                  root = FALSE,
-                  time = nearestEvent(removal_time, 
-                                      seq(0,tmax,by=timestep))) # the root max nb of eq 
-  }
   
   create.system(
     list(time          = time,
@@ -41,7 +31,6 @@ syspreset_rockyshore_nti <- function(tmax,
          source        = list(template = './src/templates/rockyshore_nti.c.template'),
          solver_parms  = list(func     = 'derivs',
                               initfunc = 'initmod', 
-                              events   = event,
 #                               nout     = 1,
 #                               outnames = "extinct",
 #                               rootfunc = 'controlf',

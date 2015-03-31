@@ -13,7 +13,7 @@ gen_allometric_system <- function(bodyms,
   if ( unique(c(length(bodyms), 
                 nrow(topology),  # any different values
                 ncol(topology))) != length(bodyms) ) { 
-    stop("Parameter sizes mismatch.")
+    stop("Parameters sizes mismatch.")
   }
   
   # Generate metabolic rates 

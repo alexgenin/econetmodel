@@ -16,7 +16,7 @@ library(doParallel)
 register <- function() { 
   .LOCALCLUST <<- makeCluster(.USENCORES) # oh my <<-
   registerDoParallel(.LOCALCLUST) # register parallel backend to foreach
-  message("Started cluster with ", .USENCORES, " cores")
+  message("Started local cluster with ", .USENCORES, " cores")
 }
 
 # Destroy a cluster
@@ -32,10 +32,14 @@ parjob <- function() {
   if ( ! .USEPARALLEL) { 
     return(FALSE);
   } else { 
+    
+    clusterCall(.LOCALCLUST, document)
+    
     # Export packages
     pkgs <- .packages()
-    sapply(pkgs, function(p) clusterEvalQ(.LOCALCLUST,
-                                          library(p, character.only=TRUE)))
+    for (pkg in pkgs) { 
+      clusterCall(.LOCALCLUST, library, pkg, character.only=TRUE)
+    }
     
     # Export environments
     clusterExport(.LOCALCLUST, 
@@ -48,11 +52,10 @@ parjob <- function() {
   }
 }
 
-# If a cluster exists, then stop it
-if ( exists(".LOCALCLUST") ) { 
+# If a cluster exists and we asked for no parallelism, then stop it
+if ( ! .USEPARALLEL && exists(".LOCALCLUST") ) { 
   unregister()
+# If a cluster does not exist but we asked for parallelism
+} else if ( .USEPARALLEL && ! exists(".LOCALCLUST") ) { 
+  register()
 }
-
-# Create a new cluster if necesary
-if (.USEPARALLEL) register()
-

@@ -19,7 +19,7 @@ compile.system <- function(system,
   .check_if_system(system)
   
   # Get output c file
-  output_cfile <- paste0(lib.dir,'/',as.character(output_cfile),'.c')
+  output_cfile <- paste0(lib.dir, '/', as.character(output_cfile),'.c')
   
   # Create a temporary directory
   if ( ! file.exists(lib.dir) ) dir.create(lib.dir)

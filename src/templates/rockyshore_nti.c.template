@@ -14,7 +14,7 @@
 
 // Print debug messages ?
 static double eq_zerotol = 1e-30; // max derivs value to consider eq
-static double zerotol = 1e-10;    // min abundance of a species
+static double zerotol = 1e-5;    // min abundance of a species
 int steps_since_root;  // min number of evaluations to consider 
                        // btw two equilibrium
 
@@ -48,6 +48,12 @@ double ydot_global[Nsp];
  */
 double remaining_eq;
 
+/* We store an array containing the extant species as a global variable: this
+ * array is looped over to determine which species are interacting with each
+ * other */
+int extant_species[Nsp];
+int extant_n;
+
 /* Same thing here, we need to have the parameters globally available. This 
  * function (provided by deSolve) takes care of this.
  * 
@@ -57,6 +63,12 @@ void initmod(void (* odeparms)(int *, double *)) {
   // Reset global values
   remaining_eq     = remaining_eq_value;
   steps_since_root = min_step_btw_root;
+  
+  // initialize species statuses
+  extant_n = Nsp;
+  for (int i=0; i<Nsp; i++) {
+    extant_species[i] = i;
+  }
   
   // non-zero the derivatives on start so there is no equilibrium detected
   // on step 1
@@ -126,13 +138,18 @@ void controlf(int *neq,
 void remove_species(int *n, double *t, double *y) { 
   // Modifies the system's state in place !
   
-  // Note the -1 to adjust for R indexing and the rintf to cast 
-  // p.removed_species to an integer.
+  // Note the -1 to adjust for R indexing and the lrint to cast 
+  // p.removed_species values to an integer.
   // We use a long integer because there is no double -> int rounding function,
   // but it seems to work the same as far as indexing is concerned.
-  long int which_species = lrint(p.removed_species) - 1;
+  long int N_remove = lrint(p.removed_species_total[0]);
   
-  y[which_species] = 0.0; // OMG dead stuff
+  for (int i=0; i < N_remove; i++) { 
+    long int which_species = lrint(p.removed_species[i]) - 1;
+    // Rprintf("Removing %i (total:%i)\n", which_species+1, N_remove);
+    y[which_species] = 0.0; // OMG dead stuff
+  }
+  
 }
 
 
@@ -149,59 +166,72 @@ void derivs(int *neq,     // neq is the number of equations
             int *ip)      // [number of output vals, 
                           //  length of yout,
                           //  length of *ip]
-{   
-  int is_extant[Nsp];
+{ 
   double Knt = 0;
   double K = 0;
   double sumpreyatk = 0;
   double F[Nsp][Nsp]; 
   
+  // Default values for ydot is 0 
+  memset(ydot, 0, sizeof(*ydot) * Nsp);
   
-  
-  // Get species extinction statuses
+  // Get species still in the system and initialize
+  int extant_n=0;
   for (int i=0; i<Nsp; i++) { 
-    is_extant[i] = 1;
-    if ( y[i] < zerotol ) { 
-      is_extant[i] = 0;
+    if ( y[i] > zerotol ) { 
+      extant_species[extant_n] = i;
+      extant_n++;
     }
   }
   
+//   for (int sp=0; sp<extant_n; sp++) { 
+//     if (isnan(y[sp])) Rf_error("got NaNs");
+//     Rprintf("%i:%e | ", extant_species[sp], y[extant_species[sp]]);
+// //     Rprintf("%i:%e | ", extant_species[sp], ydot[sp]);
+//   }
+//   Rprintf("\n");
   
-  
-  // Compute functional responses between all species
-  for (int i=0; i<Nsp; i++) { 
+  // Compute functional responses between species
+  for (int sp=0; sp<extant_n; sp++) { 
+    
+    // Focus species is i so it is easier to read
+    int i = extant_species[sp];
+    
     // Compute the total biomass of preys available to species i * atk 
     // coefficient
     sumpreyatk = 0;
-    for (int j=0; j<Nsp; j++) {
-      if (is_extant[j]) {
-        sumpreyatk += p.atk[i][j] * pow(y[j], p.q);
-      }
+    for (int sp2=0; sp2<extant_n; sp2++) {
+      int j = extant_species[sp2];
+      sumpreyatk += p.atk[i][j] * pow(y[j], p.q[0]);
     }
     
     // Fill functional responses array
-    for (int j=0; j<Nsp; j++) { 
+    for (int sp2=0; sp2<extant_n; sp2++) { 
+      int j = extant_species[sp2];
       F[i][j] = frhill(&y[j], &sumpreyatk, 
                        &p.atk[i][j], &p.w[i][j], &p.h[j], 
-                       &p.q);
+                       &p.q[0]);
     }
   }
   
-  
   /* Main pop dynamics loop */
-  for (int i=0; i<Nsp; i++) { 
-    
-    if (is_extant[i]) { 
+  for (int sp=0; sp<extant_n; sp++) { 
+    // Focus species is i so it follows the formulae 
+    int i = extant_species[sp];
+      
       
       /* Compute logistic growth
        * -------------------- */
       
       // Compute the true K[i] value as a result of non-trophic interactions
       K = p.K0[i];
-      for (int j=0; j<Nsp; j++) { 
+      
+      for (int sp2=0; sp2<extant_n; sp2++) { 
+        int j = extant_species[sp2];
+        
         // We pass the links as a bonus/malus: we need to convert to absolute 
         // values in the rational function. p.y0 is the typical biomass of i
-        if ( is_extant[j] && p.dK[j][i] > 0 ) { // if species j interacts with our focus sp i 
+        if ( p.dK[j][i] > 0 ) { // if species j interacts with our focus sp i 
           Knt = p.K0[i] + p.dK[j][i];
           K += (Knt * y[i] + p.K0[i] * p.y0[i] ) / ( y[i] + p.y0[i] );
         }
@@ -210,39 +240,31 @@ void derivs(int *neq,     // neq is the number of equations
       ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / K );
       
       
-      
       /* Trophic interactions
        * -------------------- */
       
       // Interactions
-      for (int j=0; j<Nsp; j++) {
-        
-        // If species j is still alive, then we interact with it.
-        if ( is_extant[j] ) { 
+      for (int sp2=0; sp2<extant_n; sp2++) {
+        int j = extant_species[sp2];
           
-          // Species i eats j
-          ydot[i] += y[i] * p.e[j][i] * F[i][j];
+        // Species i eats j
+        ydot[i] += y[i] * p.e[j][i] * F[i][j];
           
-          // Species i gets eaten by j
-          ydot[i] += - y[j] * F[j][i];
+        // Species i gets eaten by j
+        ydot[i] += - y[j] * F[j][i];
           
-        }
       }
       
       
       /* Mortality 
        * --------- */
+      
       ydot[i] += - p.x[i] * y[i];
       
-  } else { // -- end is_extant
-    // if extinct, then do not modify species abundance
-    ydot[i] = 0.0;
-  }
+  } 
   
   // Export ydot to other functions
   // ydot_global[i] = ydot[i];
-  
-  } // -- end loop on i
   
   // NB: there is no need to return anything: all the stuff is modified in place
 }
