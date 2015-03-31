@@ -5,9 +5,15 @@
 
 // Functional response(s)
 double frhill(double *prey, 
+<<<<<<< HEAD
               double *sumpreyatk, 
               double *atk, 
               double *w,
+=======
+              double *total_prey, 
+              double *atk, 
+              double *w, 
+>>>>>>> master
               double *h,
               double *q);
 

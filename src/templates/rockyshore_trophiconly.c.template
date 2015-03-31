@@ -1,0 +1,252 @@
+#include <R.h>
+#include <exports.h>
+#include <math.h>  // for fmax, round
+#include <float.h> // for double/float limits
+
+#define min_step_btw_root 5
+#define remaining_eq_value  2.0 // max number of eqs to consider
+#define dbg 1 // debug ?
+
+/* The template processing in R will produce two #define macros here for : 
+ *   - Nsp : the number of species (equal to Nsp in the solver function)
+ *   - Np  : the number of parameters 
+ */
+// [[template::defines]]
+
+static double eq_zerotol = 1e-30; // max derivs value to consider eq
+static double zerotol = 1e-10;    // min abundance of a species
+int steps_since_root;  // min number of evaluations to consider 
+                       // btw two equilibrium
+
+// Note: C STORES ARRAYS IN ROW-MAJOR ORDER !!!
+
+/* We pass all our parameters as a big array of doubles. For convenience we 
+ * define here a union/struct that allows referring to them as p.<name> so 
+ * the code is much more readable. 
+ * 
+ * Same thing here, the tag will be replaced by the actual values of the 
+ * parameters. 
+ */
+union parms { 
+  struct { 
+    // [[template::declarations]]
+  };
+  double value[Np];
+} p; // instance (name to be referred to)
+
+/* We want to be able to determine if the system is at equlibrium to perform
+ * an action. To do this we need to have a globally available copy of the 
+ * derivatives. 
+ * This line defines this array.
+ */
+double ydot_global[Nsp];
+
+/* We want to stop when some number of equilibirum has been reached: we store
+ * the maximum number of equilibria to reach in maxeq. Note that this is 
+ * stored a double, but deSolve provides correct handling for floating point
+ * errors.
+ */
+double remaining_eq;
+
+/* We record the extant species and update their status as integer. If we do 
+ * not do this then species can recover due to floating-point errors.
+ */
+int is_extant[Nsp];
+
+/* Same thing here, we need to have the parameters globally available. This 
+ * function (provided by deSolve) takes care of this.
+ * 
+ * We also reset the global values.
+ */
+void initmod(void (* odeparms)(int *, double *)) {
+  // Reset global values
+  remaining_eq     = remaining_eq_value;
+  steps_since_root = min_step_btw_root;
+  
+  // Reset species statuses
+  for (int i=0; i<Nsp; i++) { 
+    is_extant[i] = 1;
+  }
+  
+  memset(ydot_global, 1, sizeof(ydot_global)); // non-zero the derivatives on start
+  
+  // Copy params values into correct array
+  int N=Np;
+  odeparms(&N, p.value); 
+}
+
+/* This function solves for a root (returns 0 if root is reached) and follows
+ * the guidelines provided by deSolve. It allows us to monitor the behavior
+ * of the model and decide on what to do.
+ */
+void controlf(int *neq, 
+              double *t, 
+              double *y, 
+              int *ng, 
+              double *gout,
+              double *out, 
+              int *ip) { 
+  
+  // deSolve does not initialize gout values so if we've just run the model 
+  // before, the solver will find a root on the first step (where we stopped
+  // last time). We thus set gout value to a default before considering 
+  // whether or not we have roots.
+  gout[1] = 1.0; 
+  gout[0] = 1.0; 
+  
+  // We store the maximum derivative in gout[0] and the number of roots. Do not
+  // set to 0 (otherwise there will be a false equilibirum detected on step 1)
+  // 
+  // We do our own root detection instead of passing the job to deSolve 
+  // because we need to count the number of equilibria reached.
+  // Note that deSolve triggers stuff when roots are zero !!!
+  double eq_unreached = 1.; 
+  
+  // We decide whether to stop or not the simulation depending on the number 
+  // of equilibria we have reached so far.
+  int got_eq = 0;
+  got_eq = eq_reached(neq, ydot_global, &eq_zerotol);
+  
+  if (got_eq) { // eq reached
+    
+    steps_since_root--;
+    
+    // If we actually consider the reached equilibrium
+    if (steps_since_root == 0) { 
+      eq_unreached = 0.;
+      
+      // decrease the counter of the max number of eq to reach (/!\ double !) 
+      // we stop the run when this counter gets to zero
+      remaining_eq = fmax(remaining_eq - 1., 0.);  
+      steps_since_root = min_step_btw_root; // reset root interval
+    }
+  }
+  
+  // Put the return values where they belong
+  gout[0] = eq_unreached;
+  gout[1] = remaining_eq;
+}
+
+
+
+
+/* We define here an event that will happen at a time specified in R */
+void remove_species(int *n, double *t, double *y) { 
+  // Modifies the system's state in place !
+  
+  // Note the -1 to adjust for R indexing and the rintf to cast 
+  // p.removed_species to an integer.
+  // We use a long integer because there is no double -> int rounding function,
+  // but it seems to work the same as far as indexing is concerned.
+  long int which_species = lrint(p.removed_species) - 1;
+  // Rprintf("Removing species %i", which_species + 1);
+  y[which_species] = 0.0; // OMG dead stuff
+}
+
+
+
+
+/* This is the core function of the model that returns the 
+ * partial derivatives */
+void derivs(int *neq,     // neq is the number of equations
+            double *t,    // value of the independent variable (time)
+            double *y,    // current state
+            double *ydot, // will contain the derivatives
+            double *yout, // vector with [nout values of other output variables] 
+                          // ++ [rpar values]
+            int *ip)      // [number of output vals, 
+                          //  length of yout,
+                          //  length of *ip]
+{ 
+  double funcresp = 0; // functional response
+  
+  // Compute the total biomass of preys available to each species
+  double sum_preysatk[Nsp];
+  for (int i=0; i<Nsp; i++) {
+    sum_preysatk[i] = 0;
+    for (int j=0; j<Nsp; j++) {
+      sum_preysatk[i] += p.atk[i][j] * pow2(y[j], p.q);
+    }
+  }
+  
+  /* Main pop dynamics loop */
+  for (int i=0; i<Nsp; i++) { 
+    
+    if (is_extant[i]) { 
+      
+      // Note: is_extant[i] guarantees y[i] > 0 so pow() uses inside are safe.
+      if(dbg) Rprintf("sp%i:\n", i);
+      
+      // Intrinsic logistic growth
+      ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / p.K[i] );
+      
+      // Interactions
+      for (int j=0; j<Nsp; j++) {
+        
+        // If species j is still alive, then we interact with it.
+        if ( is_extant[j] ) { 
+          
+          // Species i eats j
+          funcresp = frhill(&y[j], &sum_preysatk[i], 
+                            &p.w[i][j], &p.atk[i][j], 
+                            &p.h[j], &p.q);
+          
+          ydot[i] += y[i] * funcresp * p.e[j][i];
+          
+          if(dbg) Rprintf("eat%i:%e ", j, y[i] * funcresp * p.e[j][i]);
+          
+          
+          // Species i gets eaten by j
+          funcresp = frhill(&y[i], &sum_preysatk[j], 
+                            &p.w[j][i], &p.atk[j][i], 
+                            &p.h[i], &p.q);
+          ydot[i] += - y[j] * funcresp; 
+          
+          if(dbg) Rprintf("get%i:%e ", j,  - y[j] * funcresp);
+          
+          if(dbg) Rprintf("\n");
+        }
+      }
+      
+      // Mortality
+      ydot[i] += - p.x[i] * y[i];
+      if(dbg) Rprintf("mor: %e\n", -p.x[i] * y[i]);
+      if(dbg) Rprintf("=> %e \n", ydot[i]);
+      if(dbg) Rprintf("\n");
+      
+      
+    } else { // -- end i is_extant
+      // extinct, then we do not change its abundance
+      ydot[i] = 0.0;
+    }
+  }
+  
+  // Export ydot to other functions
+  for (int i=0; i<Nsp; i++) { 
+    ydot_global[i] = ydot[i];
+  }
+  
+  // Update species extinction status
+  for (int i=0; i<Nsp; i++) { 
+    if ( is_extant[i] && y[i] < zerotol ) { 
+      is_extant[i] = 0;
+    }
+  }
+  
+  // Store number of extinct species
+  yout[0] = 0.0;
+  for (int i=0; i<Nsp; i++) {
+    if ( ! is_extant[i] ) { // mind the !
+      yout[0] += 1.0;
+    }
+  }
+  
+//   for (int i=0; i<Nsp; i++) {
+//     Rprintf("%e | ", ydot[i]);
+//     if (isnan(ydot[i])) { 
+//       Rf_error("Error");
+//     }
+//   }
+  
+  // NB: there is no need to return anything: all the stuff is modified in place
+}
