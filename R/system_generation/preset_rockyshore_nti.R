@@ -28,7 +28,7 @@ syspreset_rockyshore_nti <- function(tmax) {
          removal_time  = removal_time,
          state         = rep(.5, Nsp),
          parms         = parameters,
-         source        = list(template = './src/templates/rockyshore_nti.c.template'),
+         source        = list(template = './src/templates/rockyshore.c.template'),
          solver_parms  = list(func     = 'derivs',
                               initfunc = 'initmod', 
 #                               nout     = 1,

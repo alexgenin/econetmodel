@@ -9,7 +9,8 @@ FC <- fcache <- function(fun,...,
                          cache.ignore=FALSE,  # ignore cache, always compute result
                          cache.clear=FALSE,
                          verbose=FALSE) {  # other args passed to function
-  
+  if (!require(R.cache)) 
+    stop("fcache needs package R.cache to work.")
   
   if (cache.clear) {
     message('Removing cache files...\n')
@@ -60,3 +61,10 @@ FC <- fcache <- function(fun,...,
   return(fun.result)
 }
 
+
+# This function returns the same function, but with memoizer enabled.
+with_fcache <- function(fun) { 
+  function(...) { 
+    fcache(fun, ...)
+  }
+}

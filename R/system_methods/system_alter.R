@@ -1,6 +1,6 @@
 
 # Add the option to remove a species to a system
-set_remove <- function(sys, species, at=3000) { 
+set_removal <- function(sys, species, at=3000) { 
   
   # Define removal event for solver
   event <- list(func = 'remove_species',

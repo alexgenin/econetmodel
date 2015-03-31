@@ -17,7 +17,7 @@ gen_c_code <- function(parameters,         # System list
     tags_funs <- list(gen_declarations, gen_defines)
   }
   if (is.null(output)) { 
-    output <- gen_output(template)
+    output <- paste0(dirname(str), '/../', sub(".template","", basename(str)))
   }
   
   # Read template
@@ -72,6 +72,7 @@ mktag <- function(str) {
 # Generators
 # ------------------------------------------
 
+# Generate #define macros for symbolic constants
 gen_defines <- function(plist, collapser="\n") { 
   
   nspecies <- lapply(plist, function(x) vecmat_switch(x, length(x), ncol(x)))
@@ -100,6 +101,7 @@ gen_onedeclaration <- function(parm.name, parm.value) {
 
 # Utils 
 # ------------------------------------------
+# Generate a size qualifier for a declaration (the [y] in double x[y])
 gen_size_qualifier <- function(elem) { 
     vecmat_switch(elem, 
                   paste0("[", length(elem),"]"),
@@ -116,9 +118,4 @@ vecmat_switch <- function(thing, isvec, ismat, elsefun=stop) {
   } else { 
     stop('Not a matrix or a vector, check input')
   }
-}
-
-# Returns the output name of a template
-gen_output <- function(str) { 
-  paste0(dirname(str), '/../', sub(".template","", basename(str)))
 }
