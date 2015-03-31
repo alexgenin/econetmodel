@@ -38,7 +38,8 @@ NumericMatrix select_range(NumericMatrix inmat,
   }
   
   // Also transfer attributes (colnames in fact)
-  // TODO: will crash if rownames are defined ?
+  // TODO: will crash if rownames are defined ? (because the 
+  // size of the rownames vector will be different).
   output.attr("dimnames") = inmat.attr("dimnames");
   
   // return the new matrix
