@@ -38,7 +38,8 @@ compile.system <- function(system,
   output_so   <- paste0(lib.dir,"/",dllname,".so")
   includes <- paste0(dir(include.dir, pattern=".c$", full.names=TRUE),collapse=' ')
   
-  cmd <- paste0('PKG_CFLAGS="',PKG_CFLAGS, ' -I ',include.dir,'"',
+  cmd <- paste0('PKG_CFLAGS="',PKG_CFLAGS, ' -I ',include.dir, ' ',
+                '-O2 ', '-march=native ', '"', # optimization flags
                 ' R CMD SHLIB ', 
                 includes, ' ',
                 output_cfile, " -o ", output_so)

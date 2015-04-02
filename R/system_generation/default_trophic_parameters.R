@@ -15,27 +15,17 @@ default_trophic_parms <- function(bodyms) {
   # Generate 
   allometric_vars <- gen_allometric_system(bodyms, trophic_topology)
   
-  # Generate K and dK
-  K0 <- rep(1, Nsp)
-  
   # Comsumption rates
   ws <- t(apply(trophic_topology, 1, 
                 function(X) if (sum(X)>0) X/sum(X) else X))
 
-  # Typical abundances of species
-  y0 <- rep(.5, Nsp)
-  
   # Conversion efficiencies
   e <- matrix(.85, ncol=Nsp, nrow=Nsp)
   
   # Default reproduction rate
   r <- c(1,1,1,1, 0,0, 0,0)
+  K <- rep(1, 10)
   
-  alter_list(allometric_vars,
-             r=r,
-             K0=K0,
-             y0=y0,
-             e=e,
-             w=ws,
-             q=.5) 
+  # Return whole list
+  alter_list(allometric_vars, r=r, K=K, e=e, w=ws, q=.5) 
 }

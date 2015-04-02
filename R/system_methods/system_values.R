@@ -26,7 +26,7 @@ get_parms            <- get_in_list ('parms')
 get_solver_parms     <- get_in_list ('solver_parms')
 get_template         <- get_in_list2('source','template')
 get_stability_status <- get_in_list ('stability_status')
-get_kept_output      <- get_in_list('kept_output')
+get_layout           <- get_in_list('layout')
 
 # Set the compiled form for parameters
 set_compiled_parms <- function(system,parms) { 

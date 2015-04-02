@@ -167,8 +167,6 @@ void derivs(int *neq,     // neq is the number of equations
                           //  length of yout,
                           //  length of *ip]
 { 
-  double Knt = 0;
-  double K = 0;
   double sumpreyatk = 0;
   double F[Nsp][Nsp]; 
   
@@ -184,13 +182,6 @@ void derivs(int *neq,     // neq is the number of equations
     }
   }
   
-//   for (int sp=0; sp<extant_n; sp++) { 
-//     if (isnan(y[sp])) Rf_error("got NaNs");
-//     Rprintf("%i:%e | ", extant_species[sp], y[extant_species[sp]]);
-// //     Rprintf("%i:%e | ", extant_species[sp], ydot[sp]);
-//   }
-//   Rprintf("\n");
-  
   // Compute functional responses between species
   for (int sp=0; sp<extant_n; sp++) { 
     
@@ -198,7 +189,9 @@ void derivs(int *neq,     // neq is the number of equations
     int i = extant_species[sp];
     
     // Compute the total biomass of preys available to species i * atk 
-    // coefficient
+    // coefficient, needed for the functional response.
+    // Ideally, this would be in frhill but there is no simple way to pass 
+    // a 2D matrix.
     sumpreyatk = 0;
     for (int sp2=0; sp2<extant_n; sp2++) {
       int j = extant_species[sp2];
@@ -224,26 +217,12 @@ void derivs(int *neq,     // neq is the number of equations
        * -------------------- */
       
       // Compute the true K[i] value as a result of non-trophic interactions
-      K = p.K0[i];
-      
-      for (int sp2=0; sp2<extant_n; sp2++) { 
-        int j = extant_species[sp2];
-        
-        // We pass the links as a bonus/malus: we need to convert to absolute 
-        // values in the rational function. p.y0 is the typical biomass of i
-        if ( p.dK[j][i] > 0 ) { // if species j interacts with our focus sp i 
-          Knt = p.K0[i] + p.dK[j][i];
-          K += (Knt * y[i] + p.K0[i] * p.y0[i] ) / ( y[i] + p.y0[i] );
-        }
-      }
-      
-      ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / K );
+      ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / p.K[i] );
       
       
       /* Trophic interactions
        * -------------------- */
       
-      // Interactions
       for (int sp2=0; sp2<extant_n; sp2++) {
         int j = extant_species[sp2];
           
@@ -258,8 +237,15 @@ void derivs(int *neq,     // neq is the number of equations
       
       /* Mortality 
        * --------- */
-      
       ydot[i] += - p.x[i] * y[i];
+      
+      /* Non-trophic interactions 
+       * ------------------------ */
+      for (int sp2=0; sp2<extant_n; sp2++) {
+        int j = extant_species[sp2];
+        
+        ydot[i] += - p.nt[i][j] * y[j];
+      }
       
   } 
   

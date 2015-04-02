@@ -5,16 +5,17 @@ syspreset_rockyshore_nti <- function(tmax) {
   bodyms <- c(1,1,1,1, 3,3, 6,6)
   Nsp <- length(bodyms)
   
-  # Generate K and dK
-  dK <- list(list(from=5, to=c(1,2,3,4), val=.5))
-  dK <- gen_interaction_matrix(dK, Nsp)
-  
   parameters <- alter_list(default_trophic_parms(bodyms), 
-                           dK = dK,
                            # We default to not removing species but these parameters
-                           # need to be set so the C code works
+                           # need to be set so the C code works correctly.
                            removed_species_total=0,
                            removed_species=0)
+  
+  # We set the metabolic rate of producers to zero so they have no intrinsic 
+  # mortality
+  parameters <- parameters %>% 
+                  alter_list(x=c(0,0,0,0, parameters[['x']][5:Nsp])) %>% 
+                  alter_list(nt=matrix(0,Nsp,Nsp))
   
   # Set time series parameters
   time <- 0 
@@ -35,7 +36,5 @@ syspreset_rockyshore_nti <- function(tmax) {
 #                               outnames = "extinct",
 #                               rootfunc = 'controlf',
 #                               nroot    = 2,
-                              verbose  = FALSE)
-         ))
-  
+                              verbose  = FALSE)))
 }

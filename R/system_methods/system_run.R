@@ -31,6 +31,11 @@ mrun <- function(sys, N,
 # Run a system for a given amount of time or along a vector of time
 run <- function(sys, ...) {
   
+  # Handle parameters if the system is a compiled one
+  if (inherits(sys, 'system.compiled')) {
+    sys[['solver_parms']][['parms']] <- prepare_parameters(sys[['parms']])
+  }
+  
   # Handle time specification
   times <- seq(get_time(sys), get_tmax(sys), by=get_timestep(sys))
   
