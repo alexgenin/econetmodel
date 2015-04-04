@@ -35,4 +35,3 @@ test_that("Test if alter_list works", {
                    "b", "c")), d = 4, e = 7, a = 1), .Names = c("z", "d", "e", "a")))
   
 })
-

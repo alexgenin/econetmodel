@@ -28,10 +28,3 @@ get_template         <- get_in_list2('source','template')
 get_stability_status <- get_in_list ('stability_status')
 get_layout           <- get_in_list('layout')
 
-# Set the compiled form for parameters
-set_compiled_parms <- function(system,parms) { 
-  system[['solver_parms']][['parms']] <- parms
-  system
-}
-
-

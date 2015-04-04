@@ -16,10 +16,10 @@ gen_allometric_system <- function(bodyms,
   if ( unique(c(length(bodyms), 
                 nrow(topology),  # any different values
                 ncol(topology))) != length(bodyms) ) { 
-    stop("Parameters sizes mismatch.")
+    stop("Parameter sizes mismatch.")
   }
   
-  # Generate metabolic rates 
+  # Generate metabolic rates (based on Sonia's code)
   xs <- mr0 * bodyms^mr0exp
   
   # Generate attack rates (based on Sonia's code)
@@ -32,10 +32,9 @@ gen_allometric_system <- function(bodyms,
     }
   }
   
-  # Generate handling times
+  # Generate handling times (Sonia's code too)
   h <- h0*bodyms^h0exp
   
   # Return list
   list(x=xs, atk=atk.rates, h=h)
-  
 }

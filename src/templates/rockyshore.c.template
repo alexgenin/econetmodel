@@ -142,12 +142,13 @@ void remove_species(int *n, double *t, double *y) {
   // p.removed_species values to an integer.
   // We use a long integer because there is no double -> int rounding function,
   // but it seems to work the same as far as indexing is concerned.
-  long int N_remove = lrint(p.removed_species_total[0]);
   
-  for (int i=0; i < N_remove; i++) { 
-    long int which_species = lrint(p.removed_species[i]) - 1;
-    // Rprintf("Removing %i (total:%i)\n", which_species+1, N_remove);
-    y[which_species] = 0.0; // OMG dead stuff
+  for (int i=0; i < Nsp; i++) { 
+    // We encode the removal status with 0/1 as doubles
+    if (p.removed_species[i] > .5) { 
+      // Rprintf("Removing %i (total:%i)\n", which_species+1, N_remove);
+      y[i] = 0.0; // OMG dead stuff
+    }
   }
   
 }
@@ -167,7 +168,7 @@ void derivs(int *neq,     // neq is the number of equations
                           //  length of yout,
                           //  length of *ip]
 { 
-  double sumpreyatk = 0;
+  double sumprey = 0;
   double F[Nsp][Nsp]; 
   
   // Default values for ydot is 0 
@@ -192,18 +193,18 @@ void derivs(int *neq,     // neq is the number of equations
     // coefficient, needed for the functional response.
     // Ideally, this would be in frhill but there is no simple way to pass 
     // a 2D matrix.
-    sumpreyatk = 0;
+    sumprey = 0;
     for (int sp2=0; sp2<extant_n; sp2++) {
       int j = extant_species[sp2];
-      sumpreyatk += p.atk[i][j] * pow(y[j], p.q[0]);
+      sumprey += p.atk[i][j] * pow(y[j], p.q[0]);
     }
     
-    // Fill functional responses array
+    // Fill functional responses array. Note that functional response also 
+    // includes the atk and w coeffs, etc.
     for (int sp2=0; sp2<extant_n; sp2++) { 
       int j = extant_species[sp2];
-      F[i][j] = frhill(&y[j], &sumpreyatk, 
-                       &p.atk[i][j], &p.w[i][j], &p.h[j], 
-                       &p.q[0]);
+      F[i][j] = p.w[i][j] * p.atk[i][j] * pow(y[j], 2.0 + p.q[0]) / 
+                  ( 1 + ( p.w[i][j] * p.h[i] * sumprey ) );
     }
   }
   
@@ -227,10 +228,10 @@ void derivs(int *neq,     // neq is the number of equations
         int j = extant_species[sp2];
           
         // Species i eats j
-        ydot[i] += y[i] * p.e[j][i] * F[i][j];
+        ydot[i] += y[i] * F[i][j];
           
         // Species i gets eaten by j
-        ydot[i] += - y[j] * F[j][i];
+        ydot[i] += - y[j] * F[j][i] / p.e[j][i];
           
       }
       
@@ -238,6 +239,7 @@ void derivs(int *neq,     // neq is the number of equations
       /* Mortality 
        * --------- */
       ydot[i] += - p.x[i] * y[i];
+      
       
       /* Non-trophic interactions 
        * ------------------------ */

@@ -17,27 +17,29 @@ set_removal <- function(sys, species, at=3000) {
   # Define removal event for solver
   event <- list(func = 'remove_species',
                 root = FALSE,
-                time = nearestEvent(at, 
-                                    seq(0, get_tmax(sys), 
-                                        by=get_timestep(sys)))) 
+                time = nearestEvent(at, seq(0, get_tmax(sys), 
+                                    by=get_timestep(sys)))) 
+  
+  # Rebuild species removal vector
+  to_remove <- rep(0, get_size(sys))
+  to_remove[species] <- 1 
   
   sys %>% 
-    alter_system_(solver_parms=list(events=event)) %>% 
-    alter_parms_(removed_species=species,
-                 removed_species_total=length(species)) 
+    alter_system_(solver_parms=list(events=event), 
+                  removal_time=at) %>% # include info for later
+    alter_parms_(removed_species=to_remove) 
 }
-    # syspreset_rockyshore_nti(20) 
-#     mrun(sys_withnti, 100, one_simulation)
 
 # Alter the parameters of a system, non-standard evaluation
 alter_parms  <- function(sys, ...) {
-  # Get and eval new elems
+  # Get and eval new elems (no pipes here otherwise match.call fails)
   new_elems <- match.call(expand.dots=FALSE)[['...']]
   new_elems <- lapply(new_elems, eval, 
                       envir=sys[["parms"]], enclos=parent.frame())
   
   # Alter the stuff
   sys[["parms"]] <- alter_list_(sys[["parms"]], new_elems=new_elems)
+  
   sys
 }
 # Same function but using standard evaluation

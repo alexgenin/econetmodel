@@ -14,7 +14,8 @@ compile.system <- function(system,
                            output_cfile = "last_run",
                            lib.dir  = "./src/compiled_systems",
                            include.dir = "./src/include",
-                           PKG_CFLAGS="-Wall") { 
+                           PKG_CFLAGS="-Wall", 
+                           quiet=FALSE) { 
   
   .check_if_system(system)
   
@@ -43,8 +44,9 @@ compile.system <- function(system,
                 ' R CMD SHLIB ', 
                 includes, ' ',
                 output_cfile, " -o ", output_so)
+  
   message(cmd)
-  exit_code <- system(cmd)
+  exit_code <- system(cmd, ignore.stdout=quiet, ignore.stderr=quiet)
   
   if (exit_code == 0) { 
     message('Loading shared object.')
@@ -53,10 +55,6 @@ compile.system <- function(system,
     # file.remove(output_cfile)
     stop('Compilation failed.')
   }
-  
-  # Process parameters in a way the compiled code can understand
-  system <- set_compiled_parms(system,
-                               prepare_parameters(get_parms(system)))
   
   class(system) <- c('system.compiled', 'system', 'list')
   return(system)

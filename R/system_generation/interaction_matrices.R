@@ -10,6 +10,7 @@ interact_random <- function(sys, rfun, ...) {
 }
 
 # Generate interaction coefficients that are below a certain value
+# The result of all interactions must be always below the metabolic rate x
 interact_below <- function(sys, mins=-Inf, maxs=Inf, rfun, ...) { 
   
   maxs <- eval(substitute(maxs), envir=get_parms(sys), enclos=parent.frame())
