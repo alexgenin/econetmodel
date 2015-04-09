@@ -2,59 +2,155 @@
 # Functions that take a system object and return understandable stuff
 # 
 
-# Insert the parameters as columns in the output matrix
-insert_parms <- function(result, ..., sys=attr(result,"system")) { 
+# Insert the removal situation
+insert_removal_case <- function(result, 
+                                sys=attr(result, "system")) { 
   
+  rmsp <- which(get_parms(sys)[['removed_species']] > 0)
+  
+  # Create matrix with removal cases
+  result <- cbind(as.data.frame(result), 
+                  rmcase=paste0(rmsp,collapse='') )
+  
+  with_system_attr(result, sys)
+}
+
+# Count the number of secondary extinctions
+insert_sec_extinctions <- function(result, 
+                                   removal_time=sys[['removal_time']],
+                                   removal_species=get_parms(sys)[['removed_species']],
+                                   sys=get_sys(result)) { 
+  
+  # Warn if not enough info 
+  if ( removal_time >= max(result[ ,'time']) ) {
+    warning("Not enough information to compute the number of secondary",
+            "extinctions. Returning NA.")
+    secextincts <- NA_integer_
+    
+  } else { 
+    
+    # Find nearest line before removal time
+    state_before <- result[last_before(removal_time, result[ ,'time']), ]
+    state_after  <- result[nrow(result), ]
+    
+    # Count secondary extinct species
+    spcols <- seq.int(get_size(sys)) + 1 # first col is time, xx nexts are nodes
+    extincts_before <- state_before[spcols] == 0
+    extincts_after  <- state_after[spcols] == 0
+    species_removed <- removal_species > 0
+    
+    secextincts <- sum(extincts_after & ! extincts_before & ! species_removed)
+  }
+  
+  # Add it to result matrix
+  result <- cbind(result, secext=rep(secextincts, nrow(result)))
+  with_system_attr(result, sys)
+}
+
+# Insert the parameters as columns in the output matrix
+insert_parms <- function(result, ..., sys=get_sys(result)) { 
+  
+  # Stop if sys is not found
+  if (is.null(sys)) stop("System object not found. Pass explicitely with sys=")
   
   # Get params from system
-  parms <- get_parms(sys)
   to_insert <- as.list(match.call(expand.dots=FALSE))[["..."]] 
+  to_insert <- lapply(to_insert, eval, envir=get_parms(sys))
   
-  # Parse unevaled to_insert to add names
-  to_insert_names <- unlist(lapply(to_insert, deparse))
-  to_insert_names <- to_insert_names %>% 
-                       gsub('[[:punct:]_]', '', .) %>%
-                       gsub(' ', '', .)
+  # Select and bind subsets of parms. Note that unlist() conveniently add numbers
+  # when elements of to_insert are vectors. 
+  # The system attribute is transfered
+  result <- do.call(cbind, c(list(result), unlist(to_insert)))
   
-  to_insert <- lapply(to_insert, eval, envir=parms)
-  names(to_insert) <- to_insert_names
-  
-  # Select and bind subsets of parms
-  do.call(cbind, c(list(result),to_insert)) 
-  
+  # Transfer attr and return
+  with_system_attr(result, sys)
 }
 
 # Select time range(s) (so unreadable)
-select_ranges_ <- function(result, time_ranges) { 
-  time_ranges %>%
-    lapply(., .is_in_range, x=result[ ,'time']) %>%
-    lapply(., function(subs) result[subs, , drop=FALSE]) %>%
-    lapply(., as.data.frame) %>% 
-    mapply0(mutate, ., range=names(time_ranges)) %>%
-    do.call(rbind, .) -> 
-    newdat
+select_ranges <- function(result, ..., 
+                          sys=get_sys(result),
+                          add.factor=FALSE) { 
   
-  # So slow though
-  range.order <- seq_along(names(time_ranges))
-  names(range.order) <- names(time_ranges)
+  ranges <- match.call(expand.dots=FALSE)[['...']] 
+  ranges <- lapply(ranges, eval, envir=sys, enclos=parent.frame())
   
-  newdat[ ,"range"] <- with(newdat, reorder(range, range.order[range]))
+  # Create new tab 
+  result.new <- lapply(ranges, 
+                       function(r) { 
+                         if (length(r) == 1) { 
+                           result[ismin(abs(result[,"time"]-r)) , , drop=FALSE]
+                         } else { 
+                           result[result[ ,"time"] >= min(r) & 
+                                  result[ ,"time"] <= max(r), ]
+                       }})
   
-  return(newdat)
+  if (add.factor == TRUE) { 
+    
+    # Add range names
+    result.new <- mapply(function(e, name) { 
+                           e <- as.data.frame(e)
+                           e[ ,'range'] <- name
+                           e 
+                         }, 
+                         result.new, names(ranges), 
+                         SIMPLIFY=FALSE)
+    
+    # Bind into a single df and convert to factor 
+    result.new <- do.call(rbind, result.new)
+    result.new[ ,'range'] <- with(result.new, reorder(range, time))
+  
+  } else { 
+    
+    result.new <- do.call(rbind, result.new)
+  }
+  
+  # Transfer attr and return
+  with_system_attr(result.new, sys)
 }
-select_ranges <- make_dotted(select_ranges_)
-.is_in_range  <- function(range,x) x >= min(range) & x <= max(range)
 
-# Adjust the names of a result (mat or df)
-adjust_names <- function(result, prefix="sp") { 
+# Adjust the names of a deSolve result (mat or df) by adding a prefix to them
+adjust_names <- function(result, prefix="sp", sys=attr(result,'system')) { 
+  # Format column names
   cols <- colnames(result)
-  cols[is_nodecol(cols)] <- paste0(prefix, cols[is_nodecol(cols)])
+  nodecols <- seq.int(get_size(sys))+1
+  cols[nodecols] <- paste0(prefix, cols[nodecols])
+  # Insert
   colnames(result) <- cols
   
-  return(result)
+  with_system_attr(result,sys)
 }
+
+# Zero below the threshold
+zero_below <- function(result, threshold, sys=get_sys(result)) { 
+  
+  spcols <- seq.int(get_size(sys)) + 1
+  result[ ,spcols][result[ ,spcols] <= threshold] <- 0
+  
+  with_system_attr(result,sys)
+}
+
 
 # Currently tests if single digit with possible prefix 
 is_nodecol <- function(current.names, prefix="") { 
   grepl(paste0('^(',prefix,'|)[0-9]{1}$'), current.names)
+}
+
+
+# Get last time step before given time
+last_before <- function(time,X) which(X >= time)[1] - 1
+
+# Try to retrieve system from the system attribute of the result
+get_sys <- function(result, attr.name='system') { 
+  if (attr.name %in% names(attributes(result))) { 
+    attr(result, attr.name) 
+  } else { 
+    stop("Could not find the system object from the passed result. Pass it",
+         "explicitely through the sys= argument")
+  }
+}
+
+# Transfer system attribute
+with_system_attr <- function(result,sys) { 
+  attr(result, "system") <- sys
+  result
 }

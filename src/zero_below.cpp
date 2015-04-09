@@ -3,7 +3,7 @@ using namespace Rcpp;
 
 // Sets values of a matrix below eps to zero
 // [[Rcpp::export]]
-NumericMatrix zero_below(NumericMatrix old, 
+NumericMatrix zero_below_cpp(NumericMatrix old, 
                          double eps) {
   
   for (int i=0; i<old.nrow(); i++) { 

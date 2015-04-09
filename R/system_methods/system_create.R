@@ -3,19 +3,19 @@
 # 
 
 # Create a system
-create.system <- function(list, type='source') { 
+system_create <- function(list, type='source') { 
   class(list) <- switch(type,
                         source=c('system.source','system','list'))
   return(list)
 }
 
 # Compile a system
-compile.system <- function(system, 
-                           output_cfile = "last_run",
-                           lib.dir  = "./src/compiled_systems",
-                           include.dir = "./src/include",
-                           PKG_CFLAGS="-Wall", 
-                           quiet=FALSE) { 
+compile <- function(system,
+                    output_cfile = "last_run",
+                    lib.dir  = "./src/compiled_systems",
+                    include.dir = "./src/include",
+                    PKG_CFLAGS="-O2 -Wall -march=native ",
+                    quiet=TRUE) { 
   
   .check_if_system(system)
   
@@ -39,9 +39,8 @@ compile.system <- function(system,
   output_so   <- paste0(lib.dir,"/",dllname,".so")
   includes <- paste0(dir(include.dir, pattern=".c$", full.names=TRUE),collapse=' ')
   
-  cmd <- paste0('PKG_CFLAGS="',PKG_CFLAGS, ' -I ',include.dir, ' ',
-                '-O2 ', '-march=native ', '"', # optimization flags
-                ' R CMD SHLIB ', 
+  cmd <- paste0('PKG_CFLAGS="',PKG_CFLAGS, ' -I ',include.dir, '" ',
+                'R CMD SHLIB ', 
                 includes, ' ',
                 output_cfile, " -o ", output_so)
   
@@ -50,6 +49,7 @@ compile.system <- function(system,
   
   if (exit_code == 0) { 
     message('Loading shared object.')
+    system[['library']] <- output_so
     dyn.load(output_so)
   } else {
     # file.remove(output_cfile)

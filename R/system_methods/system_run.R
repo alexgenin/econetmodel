@@ -2,13 +2,16 @@
 # Takes a system and a state, and runs it till equilibrium is reached.
 # 
 
-
-
 # Run a system multiple times
 mrun <- function(sys, N, 
                  runfun=run, 
                  simplify=TRUE,
+                 .parallel=FALSE, # catch the parallel arg
                  ...) { 
+  
+  # If .parallel=TRUE, then we load the library in R workers
+  if (.parallel && exists(".LOCALCLUST")) 
+    clusterEvalQ(.LOCALCLUST, dyn.load(sys[["library"]]))
   
   # Make a list of runs
   runids <- as.list(seq.int(N))
@@ -23,7 +26,7 @@ mrun <- function(sys, N,
     results <- do.call(rbind, results)
   }
   
-  results
+  with_system_attr(results, sys)
 }
 
 
@@ -32,15 +35,17 @@ mrun <- function(sys, N,
 run <- function(sys, ...) {
   
   # Handle time specification
-  times <- seq(get_time(sys), get_tmax(sys), by=get_timestep(sys))
+  times <- seq(get_tmin(sys), get_tmax(sys), by=get_timestep(sys))
   
-  result <- do.call(ode,c(list(y=get_state(sys)), 
-                          list(times=times),
-                          list(parms=prepare_parameters(sys[['parms']])),
-                          get_solver_parms(sys),
-                          ...))
+  result <- do.call(ode,
+                    c(list(y=get_state(sys)), 
+                      list(times=times),
+                      list(parms=prepare_parameters(sys[['parms']])),
+                      get_solver_parms(sys),
+                      ...))
   
   attr(result, "system") <- sys
   
-  return(result)
+  with_system_attr(result, sys)
 }
+

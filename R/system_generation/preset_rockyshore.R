@@ -33,11 +33,11 @@ syspreset_rockyshore <- function(tmax=10e3) {
                nt=matrix(0,Nsp,Nsp))
   
   # Set time series parameters
-  time <- 0 
+  tmin <- 0 
   timestep <- 2
   
-  create.system(
-    list(time          = time,
+  system_create(
+    list(tmin          = tmin,
          timestep      = timestep,
          tmax          = tmax,
          state         = rep(.5, Nsp),

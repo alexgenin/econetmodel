@@ -6,35 +6,26 @@
 using namespace Rcpp;
 
 // select_range
-NumericMatrix select_range(NumericMatrix inmat, double tmin, double tmax);
-RcppExport SEXP netmodr_select_range(SEXP inmatSEXP, SEXP tminSEXP, SEXP tmaxSEXP) {
+NumericMatrix select_range(NumericMatrix inmat, NumericVector range);
+RcppExport SEXP netmodr_select_range(SEXP inmatSEXP, SEXP rangeSEXP) {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< NumericMatrix >::type inmat(inmatSEXP );
-        Rcpp::traits::input_parameter< double >::type tmin(tminSEXP );
-        Rcpp::traits::input_parameter< double >::type tmax(tmaxSEXP );
-        NumericMatrix __result = select_range(inmat, tmin, tmax);
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericMatrix >::type inmat(inmatSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type range(rangeSEXP);
+    __result = Rcpp::wrap(select_range(inmat, range));
+    return __result;
 END_RCPP
 }
-// zero_below
-NumericMatrix zero_below(NumericMatrix old, double eps);
-RcppExport SEXP netmodr_zero_below(SEXP oldSEXP, SEXP epsSEXP) {
+// zero_below_cpp
+NumericMatrix zero_below_cpp(NumericMatrix old, double eps);
+RcppExport SEXP netmodr_zero_below_cpp(SEXP oldSEXP, SEXP epsSEXP) {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< NumericMatrix >::type old(oldSEXP );
-        Rcpp::traits::input_parameter< double >::type eps(epsSEXP );
-        NumericMatrix __result = zero_below(old, eps);
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< NumericMatrix >::type old(oldSEXP);
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    __result = Rcpp::wrap(zero_below_cpp(old, eps));
+    return __result;
 END_RCPP
 }

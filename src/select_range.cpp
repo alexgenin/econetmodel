@@ -4,8 +4,7 @@ using namespace Rcpp;
 // Sets values of a matrix below eps to zero
 // [[Rcpp::export]]
 NumericMatrix select_range(NumericMatrix inmat, 
-                           double tmin,
-                           double tmax) {
+                           NumericVector range) {
   int nrows = inmat.nrow();
   
   // Determine subset to copy
@@ -15,7 +14,7 @@ NumericMatrix select_range(NumericMatrix inmat,
   for (int i=0; i<nrows; i++) { 
     
     // First column of input matrix is always time !
-    if ( (inmat(i,0) >= tmin) && (inmat(i,0) <= tmax) ) { 
+    if ( (inmat(i,0) >= min(range)) && (inmat(i,0) <= max(range)) ) { 
       insubset(i) = 1;
       output_size++;
     } else { 

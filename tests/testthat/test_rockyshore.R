@@ -24,9 +24,9 @@ suppressMessages(
                         source = list(template = template)) %>% 
           alter_system(state=rep(.5,8)) %>% 
           alter_parms(nt=nt_topology) %>% 
-          compile.system(lib.dir=lib.dir, 
-                         include.dir=include.dir, 
-                         quiet=TRUE)
+          compile(lib.dir=lib.dir, 
+                  include.dir=include.dir, 
+                  quiet=TRUE)
 )
 # Get last line of a matrix
 last_state <- function(mat) { mat[nrow(mat), -1] }
@@ -52,7 +52,7 @@ test_that("Rockyshore model behaves correctly", {
   for (i in seq.int(10))
     expect_false(sys %>% random_state %>% run %>% { . < 0} %>% any)
   
-  # Give species very small abundance and see them staying dead
+  # Give species very small abundance and see them stay dead
   for (i in seq.int(10)) 
     expect_equal(sys %>% alter_system(state=rep(1e-10,8)) %>% run %>% 
                    last_state %>% unique,

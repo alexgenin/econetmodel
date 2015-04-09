@@ -6,8 +6,9 @@ folders <- list.dirs(".", full=TRUE)
 folders <- folders[folders != "."]
 
 # Source all R files in subdirs
-for (f in folders) { 
+for (f in folders) {
   message('Loading files in ', f)
-  files <- list.files(f, full=TRUE) 
+  files <- list.files(f, full=TRUE)
   sapply(files,source)
 }
+

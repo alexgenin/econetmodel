@@ -14,7 +14,7 @@ library(doParallel)
 
 # Register a cluster
 register <- function() { 
-  .LOCALCLUST <<- makeCluster(.USENCORES) # oh my <<-
+  .LOCALCLUST <<- makeCluster(.USENCORES) # oh my <<- in the global env
   registerDoParallel(.LOCALCLUST) # register parallel backend to foreach
   message("Started local cluster with ", .USENCORES, " cores")
 }
@@ -33,6 +33,7 @@ parjob <- function() {
     return(FALSE);
   } else { 
     
+    # Reload current directory in workers
     clusterCall(.LOCALCLUST, document)
     
     # Export packages

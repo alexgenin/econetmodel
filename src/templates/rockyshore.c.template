@@ -246,10 +246,15 @@ void derivs(int *neq,     // neq is the number of equations
       for (int sp2=0; sp2<extant_n; sp2++) {
         int j = extant_species[sp2];
         
-        ydot[i] += - p.nt[i][j] * y[j];
+        ydot[i] += p.nt[i][j] * y[j];
       }
       
-  } 
+  } // -- end of loop on extant species 
+  
+//   for (int i=0; i<Nsp; i++) { 
+//     printf("%i: %e | ", i, ydot[i]);
+//   }
+//   printf("\n");
   
   // Export ydot to other functions
   // ydot_global[i] = ydot[i];
