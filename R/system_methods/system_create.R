@@ -52,7 +52,7 @@ compile <- function(system,
     system[['library']] <- output_so
     dyn.load(output_so)
   } else {
-    # file.remove(output_cfile)
+    # file.remove(output_cfile) # usually useful for debugging
     stop('Compilation failed.')
   }
   
@@ -60,11 +60,38 @@ compile <- function(system,
   return(system)
 }
 
+# These two functions below are not used here but they relate to dealing with 
+# c code. They are used in ./R/system_run.R
+
+# Sort the parameter list to make sure they are in the good order in the memory.
+# Note that we could put all the non-trophic ones at the end as they are not 
+# always used (this way it should be more cache-friendly for the CPU).
+prepare_parms <- function(parms, size) {
+  
+  # Create non-trophic components if not present
+  need_nt_component <- ! grepl('^d{1}.*$',names(parms)) # all the ones that begin with d
+  need_nt_component <- need_nt_component & 
+                         sapply(names(parms), # does not have a d*
+                                function(name) { 
+                                  ! paste0('d',name) %in% names(parms)
+                                })
+  
+  new_components <- rep(list(matrix(0,size,size)), sum(need_nt_component))
+  names(new_components) <- paste0("d",names(parms)[need_nt_component])
+  
+  # Return the alphabetically-sorted list with all components. The order is 
+  # important as it determines the mapping in memory.
+  new_parms <- alter_list_(parms, new_elems=new_components)
+  new_parms[order(names(new_parms))]
+  
+}
+
 # Handles parameters before passing them to the C code by transforming them into
 # a numeric vector. In particular, this allows correct filling of matrices 
 # (row-major (C) vs col-major (R))
-prepare_parameters <- function(parameters) { 
-  lapply(parameters, 
-         function(elem) vecmat_switch(elem, elem, as.vector(t(elem)))) %>%
-  unlist
+vectorize_parameters <- function(parms, size) {
+  parms %>% 
+    prepare_parms(size) %>%
+    lapply(function(elem) vecmat_switch(elem, elem, as.vector(t(elem)))) %>%
+    unlist
 }

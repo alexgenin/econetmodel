@@ -6,8 +6,14 @@ links_ <- function(sys, parm, layout, threshold = 0) {
   as_edges(layout, get_parms(sys)[[parm]], threshold = threshold)
 }
 links <- function(sys, parm, layout, threshold = 0) { 
-  parm <- eval(substitute(parm), envir=get_parms(sys), enclos=parent.frame())
-  as_edges(layout, parm, threshold = threshold)
+  parm.subst <- substitute(parm)
+  parm <- eval(parm.subst, envir=get_parms(sys), enclos=parent.frame())
+  
+  # Compute edges list and add a name column to indicate the considered
+  # parameter.
+  edges <- as_edges(layout, parm, threshold = threshold)
+  edges[ ,'name'] <- as.character(parm.subst)
+  edges
 }
 
 # From an interaction matrix, makes a df suitable for use with ggplot's path

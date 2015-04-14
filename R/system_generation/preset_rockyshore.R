@@ -1,7 +1,7 @@
 # 
 # Generate a trophic_only system
 # 
-syspreset_rockyshore <- function(tmax=10e3) {
+syspreset_rockyshore <- function(tmax=10e3, timestep=2) {
   
   # Set body masses
   bodyms <- c(1,1,1,1, 3,3, 6,6)
@@ -29,12 +29,11 @@ syspreset_rockyshore <- function(tmax=10e3) {
                # These need to be always set to something otherwise C code 
                # does not work
                removed_species=rep(0,Nsp),
-               # Non trophic interaction strength, set to zero as default
-               nt=matrix(0,Nsp,Nsp))
+               # Typical abundance of a species 
+               yt=rep(1/2,Nsp)) 
   
   # Set time series parameters
   tmin <- 0 
-  timestep <- 2
   
   system_create(
     list(tmin          = tmin,

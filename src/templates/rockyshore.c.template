@@ -7,13 +7,13 @@
 #define remaining_eq_value  2.0 // max number of eqs to consider
 
 /* The template processing in R will produce two #define macros here for : 
- *   - Nsp : the number of species (equal to Nsp in the solver function)
+ *   - Nsp : the number of species (equal to *neq in the solver function)
  *   - Np  : the number of parameters 
  */
 // [[template::defines]]
 
 // Print debug messages ?
-static double eq_zerotol = 1e-30; // max derivs value to consider eq
+// static double eq_zerotol = 1e-30; // max derivs value to consider eq
 static double zerotol = 1e-5;    // min abundance of a species
 int steps_since_root;  // min number of evaluations to consider 
                        // btw two equilibrium
@@ -79,61 +79,6 @@ void initmod(void (* odeparms)(int *, double *)) {
   odeparms(&N, p.value); 
 }
 
-/* This function solves for a root (returns 0 if root is reached) and follows
- * the guidelines provided by deSolve. It allows us to monitor the behavior
- * of the model and decide on what to do.
- */
-void controlf(int *neq, 
-              double *t, 
-              double *y, 
-              int *ng, 
-              double *gout,
-              double *out, 
-              int *ip) { 
-  
-  // deSolve does not initialize gout values so if we've just run the model 
-  // before, the solver will find a root on the first step (where we stopped
-  // last time). We thus set gout value to a default before considering 
-  // whether or not we have roots.
-  gout[1] = 1.0; 
-  gout[0] = 1.0; 
-  
-  // We store the maximum derivative in gout[0] and the number of roots. Do not
-  // set to 0 (otherwise there will be a false equilibirum detected on step 1)
-  // 
-  // We do our own root detection instead of passing the job to deSolve 
-  // because we need to count the number of equilibria reached.
-  // Note that deSolve triggers stuff when roots are zero !!!
-  double eq_unreached = 1.; 
-  
-  // We decide whether to stop or not the simulation depending on the number 
-  // of equilibria we have reached so far.
-  int got_eq = 0;
-  got_eq = eq_reached(neq, ydot_global, &eq_zerotol);
-  
-  if (got_eq) { // eq reached
-    
-    steps_since_root--;
-    
-    // If we actually consider the reached equilibrium
-    if (steps_since_root == 0) { 
-      eq_unreached = 0.;
-      
-      // decrease the counter of the max number of eq to reach (/!\ double !) 
-      // we stop the run when this counter gets to zero
-      remaining_eq = fmax(remaining_eq - 1., 0.);  
-      steps_since_root = min_step_btw_root; // reset root interval
-    }
-  }
-  
-  // Put the return values where they belong
-  gout[0] = eq_unreached;
-  gout[1] = remaining_eq;
-}
-
-
-
-
 /* We define here an event that will happen at a time specified in R */
 void remove_species(int *n, double *t, double *y) { 
   // Modifies the system's state in place !
@@ -183,6 +128,27 @@ void derivs(int *neq,     // neq is the number of equations
     }
   }
   
+  // Compute non-trophic interactions coefficients here
+  // TODO: this is silly, it should be in a subfunction but we cannot pass 
+  // arrays to function (answer: use the gsl).
+  double r_nt[Nsp];
+  double K_nt[Nsp];
+  for (int i=0; i<Nsp; i++) { 
+    r_nt[i] = p.r[i];
+    K_nt[i] = p.K[i];
+  }
+  
+  for (int i=0; i<Nsp; i++) { 
+    for (int j=0; j<Nsp; j++) { 
+      if (p.dr[j][i] >= 0.1) 
+        r_nt[i] += y[j] * nti_ratfun(&y[i], &p.yt[i], &p.r[i], &p.dr[j][i]); 
+      if (p.dK[j][i] >= 0.1) // yes to only consider stuff that make sense
+        K_nt[i] += y[j] * nti_ratfun(&y[i], &p.yt[i], &p.K[i], &p.dK[j][i]); 
+    }
+  }
+  
+//   Rprintf("K3:%e\n", K_nt[3]);
+  
   // Compute functional responses between species
   for (int sp=0; sp<extant_n; sp++) { 
     
@@ -196,15 +162,18 @@ void derivs(int *neq,     // neq is the number of equations
     sumprey = 0;
     for (int sp2=0; sp2<extant_n; sp2++) {
       int j = extant_species[sp2];
-      sumprey += p.atk[i][j] * pow(y[j], p.q[0]);
+      
+      sumprey += p.atk[i][j] * pow(y[j], 1.0 + p.q[0]);
     }
     
     // Fill functional responses array. Note that functional response also 
     // includes the atk and w coeffs, etc.
+    // We alter parameters due to non-trophic     interactions here
     for (int sp2=0; sp2<extant_n; sp2++) { 
       int j = extant_species[sp2];
-      F[i][j] = p.w[i][j] * p.atk[i][j] * pow(y[j], 2.0 + p.q[0]) / 
+      F[i][j] = p.w[i][j] * p.atk[i][j] * pow(y[j], 1.0 + p.q[0]) / 
                   ( 1 + ( p.w[i][j] * p.h[i] * sumprey ) );
+      
     }
   }
   
@@ -218,7 +187,7 @@ void derivs(int *neq,     // neq is the number of equations
        * -------------------- */
       
       // Compute the true K[i] value as a result of non-trophic interactions
-      ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / p.K[i] );
+      ydot[i] = r_nt[i] * y[i] * ( 1 - y[i] / K_nt[i] );
       
       
       /* Trophic interactions
@@ -240,24 +209,7 @@ void derivs(int *neq,     // neq is the number of equations
        * --------- */
       ydot[i] += - p.x[i] * y[i];
       
-      
-      /* Non-trophic interactions 
-       * ------------------------ */
-      for (int sp2=0; sp2<extant_n; sp2++) {
-        int j = extant_species[sp2];
-        
-        ydot[i] += p.nt[i][j] * y[j];
-      }
-      
   } // -- end of loop on extant species 
-  
-//   for (int i=0; i<Nsp; i++) { 
-//     printf("%i: %e | ", i, ydot[i]);
-//   }
-//   printf("\n");
-  
-  // Export ydot to other functions
-  // ydot_global[i] = ydot[i];
   
   // NB: there is no need to return anything: all the stuff is modified in place
 }

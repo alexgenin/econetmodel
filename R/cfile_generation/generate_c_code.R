@@ -73,24 +73,32 @@ mktag <- function(str) {
 # ------------------------------------------
 
 # Generate #define macros for symbolic constants
-gen_defines <- function(plist, collapser="\n") { 
+gen_defines <- function(parms, ...) { 
   
-  nspecies <- lapply(plist, function(x) vecmat_switch(x, length(x), ncol(x)))
-  nparams  <- Reduce(sum, lapply(plist, length))
+  
+  nspecies <- vecmat_switch(parms[[1]], length(parms[[1]]), ncol(parms[[1]]))
+  
+  nparms  <- length(vectorize_parameters(parms, nspecies))
   
   txt <- paste0("#define Nsp ", nspecies[[1]], "\n",
-                "#define Np ",  nparams,       "\n")
+                "#define Np ",  nparms,       "\n")
   
   return(txt)
 }
 
 # Generate all values declaration ( double XX[Nsp][Nsp] ) given a list of
-# parameters.
-gen_declarations <- function(plist) { 
+# parameters. See also the ./R/system_create.R file for more parameters
+# handling related to c code.
+gen_declarations <- function(parms) { 
+  
+  # Read parms and generate the non-trophic components if necessary
+  nspecies <- vecmat_switch(parms[[1]], length(parms[[1]]), ncol(parms[[1]]))
+  
+  parms <- prepare_parms(parms, nspecies)
   
   declarations <- mapply(gen_onedeclaration, 
-                         names(plist),
-                         plist)
+                         names(parms),
+                         parms)
   
   paste(declarations, collapse="\n")
 }

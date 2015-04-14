@@ -71,7 +71,7 @@ select_ranges <- function(result, ...,
                           sys=get_sys(result),
                           add.factor=FALSE) { 
   
-  ranges <- match.call(expand.dots=FALSE)[['...']] 
+  ranges <- match.call(expand.dots=FALSE)[['...']]
   ranges <- lapply(ranges, eval, envir=sys, enclos=parent.frame())
   
   # Create new tab 

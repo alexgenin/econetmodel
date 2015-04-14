@@ -9,7 +9,7 @@ library(foreach)
 library(doParallel)
 
 # Switch parallelism
-.USEPARALLEL <- FALSE
+.USEPARALLEL <- TRUE
 .USENCORES <- 2
 
 # Register a cluster
@@ -30,8 +30,12 @@ unregister <- function() {
 # Parjob: returns TRUE if conditions are met to run a parallel job. 
 parjob <- function() { 
   if ( ! .USEPARALLEL) { 
+    
     return(FALSE);
   } else { 
+    
+    # Get to current directory in workers
+    clusterCall(.LOCALCLUST, setwd(getwd()))
     
     # Reload current directory in workers
     clusterCall(.LOCALCLUST, document)

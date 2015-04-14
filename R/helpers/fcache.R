@@ -2,7 +2,6 @@
 # Fcache is a memoizer for functions. It analyses a call and its arguments
 # and if the result is alread computed, then it will retrieve it form disk.
 # 
-# 
 
 fcache <- function(fun,...,
                    cache.dir='.cache',  # caching directory
