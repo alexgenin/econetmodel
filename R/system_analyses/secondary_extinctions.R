@@ -28,7 +28,3 @@ removal_cases <- function(result, removal_cols) {
   dat[ ,'removal'] <- case
   dat
 }
-
-is_sec_extinct <- function(result, removal_cols) { 
-  
-}

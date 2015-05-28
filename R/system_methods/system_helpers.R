@@ -1,5 +1,21 @@
-# 
 
+# Dimswitch: returns a different value depending of the number of dimensions
+# of an array.
+dimswitch <- function(elem, ...) { 
+  dots <- as.list(match.call(expand.dots=FALSE))[['...']]
+  
+  if (is.vector(elem)) {  # if only one dim
+    return_n <- 1
+  } else {                # more than one dim
+    return_n <- length(dim(elem))
+  }
+  
+  if (return_n > length(dots)) { 
+    stop("dimswitch: not enough dot arguments provided")
+  } else {
+    eval(dots[[return_n]], envir=parent.frame())
+  }
+}
 
 
 # Create a squared sysmat using a size

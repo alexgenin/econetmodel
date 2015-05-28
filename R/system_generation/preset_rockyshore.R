@@ -30,7 +30,7 @@ syspreset_rockyshore <- function(tmax=10e3, timestep=2) {
                # does not work
                removed_species=rep(0,Nsp),
                # Typical abundance of a species 
-               yt=rep(1/2,Nsp)) 
+               yt=rep(.25, Nsp)) 
   
   # Set time series parameters
   tmin <- 0 

@@ -38,9 +38,9 @@ run <- function(sys, ...) {
   times <- seq(get_tmin(sys), get_tmax(sys), by=get_timestep(sys))
   
   result <- do.call(ode,
-                    c(list( y = get_state(sys)), 
-                      list( times = times ),
-                      list( parms = vectorize_parameters(sys[['parms']], get_size(sys)) ),
+                    c(list(y = get_state(sys)), 
+                      list(times = times ),
+                      list(parms = vectorize_parameters(sys[['parms']], get_size(sys)) ),
                       get_solver_parms(sys),
                       ...))
   

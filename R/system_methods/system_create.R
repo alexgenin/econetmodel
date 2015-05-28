@@ -39,7 +39,7 @@ compile <- function(system,
   output_so   <- paste0(lib.dir,"/",dllname,".so")
   includes <- paste0(dir(include.dir, pattern=".c$", full.names=TRUE),collapse=' ')
   
-  cmd <- paste0('PKG_CFLAGS="',PKG_CFLAGS, ' -I ',include.dir, '" ',
+  cmd <- paste0('PKG_CFLAGS="', PKG_CFLAGS, ' -I ', include.dir, ' -std=c99" ',
                 'R CMD SHLIB ', 
                 includes, ' ',
                 output_cfile, " -o ", output_so)
@@ -76,22 +76,29 @@ prepare_parms <- function(parms, size) {
                                   ! paste0('d',name) %in% names(parms)
                                 })
   
-  new_components <- rep(list(matrix(0,size,size)), sum(need_nt_component))
-  names(new_components) <- paste0("d",names(parms)[need_nt_component])
+  # defaults to zero for those that are not given already 
+  new_components <- lapply(parms[need_nt_component], function(elem) { 
+                            array(0, vecmat_switch(elem, 
+                                                   rep(length(elem),2), 
+                                                   rep(nrow(elem),3))) 
+                           })
+  names(new_components) <- paste0("d", names(parms)[need_nt_component])
   
-  # Return the alphabetically-sorted list with all components. The order is 
-  # important as it determines the mapping in memory.
+  # Return the alphabetically-sorted list with all components. The order 
+  # matters as it determines the mapping in memory.
   new_parms <- alter_list_(parms, new_elems=new_components)
   new_parms[order(names(new_parms))]
-  
 }
 
 # Handles parameters before passing them to the C code by transforming them into
 # a numeric vector. In particular, this allows correct filling of matrices 
 # (row-major (C) vs col-major (R))
+# 
+# TODO: triple-check the in-memory mapping of arrays with ndim >= 3
 vectorize_parameters <- function(parms, size) {
+  
   parms %>% 
-    prepare_parms(size) %>%
-    lapply(function(elem) vecmat_switch(elem, elem, as.vector(t(elem)))) %>%
+    prepare_parms(size) %>% 
+    lapply(function(elem) dimswitch(elem, elem, aperm(elem), aperm(elem))) %>% 
     unlist
 }

@@ -2,6 +2,24 @@
 # Functions that take a system object and return understandable stuff
 # 
 
+# Remove unstable simulations
+discard_if_extinct <- function(result, before, 
+                               extinct_threshold,
+                               sys=attr(result,"system")) { 
+                                 
+  # Get simu ids with 
+  has_extinctions <- any(result[last_before(before, result[ ,'time']), 
+                                seq.int(get_size(sys))+1] < extinct_threshold)
+    
+  if (has_extinctions) {
+    print("discarded")
+    return( with_system_attr(result[nrow(result), ] * NA_real_, sys) )
+  } else { 
+    return(result)
+  }
+  
+}
+
 # Insert the removal situation
 insert_removal_case <- function(result, 
                                 sys=attr(result, "system")) { 
@@ -47,6 +65,35 @@ insert_sec_extinctions <- function(result,
   with_system_attr(result, sys)
 }
 
+insert_effect_size <- function(result, 
+                               removal_time=sys[["removal_time"]], 
+                               removal_species=get_parms(sys)[['removed_species']],
+                               sys=get_sys(result)) { 
+                                 
+  # Warn if not enough info 
+  if ( removal_time >= max(result[ ,'time']) ) {
+    warning("Not enough information to compute effect size. Returning NA.")
+    secextincts <- NA_real_
+    
+  } else { 
+    
+    # Find nearest line before removal time
+    state_before <- result[last_before(removal_time, result[ ,'time']), ]
+    state_after  <- result[nrow(result), ] # last state
+    
+    # Count secondary extinct species
+    spcols <- seq.int(get_size(sys)) + 1 # first col is time, xx nexts are nodes
+    effect_size <- sum( abs(state_after[spcols] - state_before[spcols]) )
+  }
+  
+  # Add it to result matrix
+  result <- cbind(result, effect_size=rep(effect_size, nrow(result)))
+  
+  with_system_attr(result, sys)
+}
+
+
+
 # Insert the parameters as columns in the output matrix
 insert_parms <- function(result, ..., sys=get_sys(result)) { 
   
@@ -55,7 +102,8 @@ insert_parms <- function(result, ..., sys=get_sys(result)) {
   
   # Get params from system
   to_insert <- as.list(match.call(expand.dots=FALSE))[["..."]] 
-  to_insert <- lapply(to_insert, eval, envir=get_parms(sys))
+  to_insert <- lapply(to_insert, eval, 
+                      envir=prepare_parms(get_parms(sys), get_size(sys)))
   
   # Select and bind subsets of parms. Note that unlist() conveniently add numbers
   # when elements of to_insert are vectors. 
@@ -66,10 +114,13 @@ insert_parms <- function(result, ..., sys=get_sys(result)) {
   with_system_attr(result, sys)
 }
 
+
+
 # Select time range(s) (so unreadable)
 select_ranges <- function(result, ..., 
                           sys=get_sys(result),
-                          add.factor=FALSE) { 
+                          add.factor=FALSE, 
+                          summarise.fun=identity) { 
   
   ranges <- match.call(expand.dots=FALSE)[['...']]
   ranges <- lapply(ranges, eval, envir=sys, enclos=parent.frame())
@@ -84,6 +135,10 @@ select_ranges <- function(result, ...,
                                   result[ ,"time"] <= max(r), ]
                        }})
   
+  # Summarise if needed
+  result.new <- lapply(result.new, aaply, 2, summarise.fun, .drop=FALSE)
+  result.new <- lapply(result.new, t)
+  
   if (add.factor == TRUE) { 
     
     # Add range names
@@ -97,7 +152,7 @@ select_ranges <- function(result, ...,
     
     # Bind into a single df and convert to factor 
     result.new <- do.call(rbind, result.new)
-    result.new[ ,'range'] <- with(result.new, reorder(range, time))
+    result.new[ ,'range'] <- with(result.new, reorder(range, result.new[ ,1]))
   
   } else { 
     

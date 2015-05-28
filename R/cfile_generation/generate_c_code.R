@@ -36,7 +36,7 @@ gen_c_code <- function(parameters,         # System list
                 output,"). Override with overwrite=TRUE"))
   }
   
-  writeChar(txt,output, eos=NULL)
+  writeChar(txt, output, eos=NULL)
   message('Wrote .c file to ', output)
   
   invisible(txt)
@@ -111,9 +111,10 @@ gen_onedeclaration <- function(parm.name, parm.value) {
 # ------------------------------------------
 # Generate a size qualifier for a declaration (the [y] in double x[y])
 gen_size_qualifier <- function(elem) { 
-    vecmat_switch(elem, 
-                  paste0("[", length(elem),"]"),
-                  paste0("[", nrow(elem),  "]", "[", ncol(elem),"]"))
+  dimswitch(elem, 
+            paste0("[", length(elem),"]"),
+            paste0("[", nrow(elem),  "][", ncol(elem),  "]"),
+            paste0("[", dim(elem)[1],"][", dim(elem)[2],"][",dim(elem)[3],"]"))
 }
 
 # Checks if an element is a matrix or a vector or else

@@ -113,8 +113,6 @@ void derivs(int *neq,     // neq is the number of equations
                           //  length of yout,
                           //  length of *ip]
 { 
-  double sumprey = 0;
-  double F[Nsp][Nsp]; 
   
   // Default values for ydot is 0 
   memset(ydot, 0, sizeof(*ydot) * Nsp);
@@ -128,67 +126,29 @@ void derivs(int *neq,     // neq is the number of equations
     }
   }
   
-  // Compute non-trophic interactions coefficients here
-  // TODO: this is silly, it should be in a subfunction but we cannot pass 
-  // arrays to function (answer: use the gsl).
-  double r_nt[Nsp];
-  double K_nt[Nsp];
-  for (int i=0; i<Nsp; i++) { 
-    r_nt[i] = p.r[i];
-    K_nt[i] = p.K[i];
-  }
+  // TODO: so far non-trophic interactions are turned off
+  // Adjust all parameters with their non-trophic modifiers
+  double K[Nsp];
+  nti_ratfun_vec(Nsp, extant_species, extant_n, K, y, p.yt, p.K, p.dK);
+  double atk[Nsp][Nsp];
+  nti_ratfun_mat(Nsp, extant_species, extant_n, atk, y, p.yt, p.atk, p.datk);
+//   Rprintf("atk[7][6]: %e (was: %e, modif:%e) \n", atk[6][5], p.atk[6][5], p.datk[4][6][5]);
   
-  for (int i=0; i<Nsp; i++) { 
-    for (int j=0; j<Nsp; j++) { 
-      if (p.dr[j][i] >= 0.1) 
-        r_nt[i] += y[j] * nti_ratfun(&y[i], &p.yt[i], &p.r[i], &p.dr[j][i]); 
-      if (p.dK[j][i] >= 0.1) // yes to only consider stuff that make sense
-        K_nt[i] += y[j] * nti_ratfun(&y[i], &p.yt[i], &p.K[i], &p.dK[j][i]); 
-    }
-  }
-  
-//   Rprintf("K3:%e\n", K_nt[3]);
-  
-  // Compute functional responses between species
-  for (int sp=0; sp<extant_n; sp++) { 
-    
-    // Focus species is i so it is easier to read
-    int i = extant_species[sp];
-    
-    // Compute the total biomass of preys available to species i * atk 
-    // coefficient, needed for the functional response.
-    // Ideally, this would be in frhill but there is no simple way to pass 
-    // a 2D matrix.
-    sumprey = 0;
-    for (int sp2=0; sp2<extant_n; sp2++) {
-      int j = extant_species[sp2];
-      
-      sumprey += p.atk[i][j] * pow(y[j], 1.0 + p.q[0]);
-    }
-    
-    // Fill functional responses array. Note that functional response also 
-    // includes the atk and w coeffs, etc.
-    // We alter parameters due to non-trophic     interactions here
-    for (int sp2=0; sp2<extant_n; sp2++) { 
-      int j = extant_species[sp2];
-      F[i][j] = p.w[i][j] * p.atk[i][j] * pow(y[j], 1.0 + p.q[0]) / 
-                  ( 1 + ( p.w[i][j] * p.h[i] * sumprey ) );
-      
-    }
-  }
+  // Fill functional responses 2D array. 
+  double F[Nsp][Nsp];
+  frhill(Nsp, extant_species, extant_n, F, y, p.w, atk, p.h, p.q[0]);
   
   /* Main pop dynamics loop */
   for (int sp=0; sp<extant_n; sp++) { 
     // Focus species is i so it follows the formulae 
     int i = extant_species[sp];
       
-      
       /* Compute logistic growth
        * -------------------- */
       
       // Compute the true K[i] value as a result of non-trophic interactions
-      ydot[i] = r_nt[i] * y[i] * ( 1 - y[i] / K_nt[i] );
-      
+      // Rprintf("K[%i]: %e\n", i, K[i]);
+      ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / K[i] );
       
       /* Trophic interactions
        * -------------------- */
@@ -201,13 +161,14 @@ void derivs(int *neq,     // neq is the number of equations
           
         // Species i gets eaten by j
         ydot[i] += - y[j] * F[j][i] / p.e[j][i];
-          
+        
       }
       
       
       /* Mortality 
        * --------- */
       ydot[i] += - p.x[i] * y[i];
+      
       
   } // -- end of loop on extant species 
   
