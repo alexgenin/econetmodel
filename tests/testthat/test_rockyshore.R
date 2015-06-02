@@ -11,7 +11,8 @@ nt_topology <- matrix(0, ncol=8, nrow=8)
 diag(nt_topology) <- 0
 
 # Absolute paths as test_that uses its own working directory
-basedir  <- "/home/alex/docs/work/2014-2015/network_modelling/dev"
+# basedir  <- "/home/alex/docs/work/2014-2015/network_modelling/dev"
+basedir  <- "/home/alex/work/projects/network_modelling/dev"
 template <- paste0(basedir, "/src/templates/rockyshore.c.template")
 cfile    <- paste0(basedir, "/src/compiled_systems/last_run.c")
 lib.dir  <- "/tmp"

@@ -10,9 +10,11 @@ mrun <- function(sys, N,
                  ...) { 
   
   # If .parallel=TRUE, then we load the library in R workers
-  if (.parallel && exists(".LOCALCLUST")) 
+  if (.parallel && exists(".LOCALCLUST")) {
     clusterEvalQ(.LOCALCLUST, dyn.load(sys[["library"]]))
-  
+  } else { 
+    .parallel <- FALSE;
+  }
   # Make a list of runs
   runids <- as.list(seq.int(N))
   
@@ -20,7 +22,9 @@ mrun <- function(sys, N,
   results <- llply(runids, 
                    function(id, runfun, sys, ...) { 
                      runfun(sys, ...) %>% cbind(id,.) 
-                   }, runfun, sys, ...)
+                   }, runfun, sys, 
+                   .parallel=.parallel, 
+                   ...)
   
   if (simplify) { 
     results <- do.call(rbind, results)

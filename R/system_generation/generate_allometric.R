@@ -22,7 +22,7 @@ gen_allometric_system <- function(bodyms,
   # Generate metabolic rates (based on Sonia's code)
   xs <- mr0 * bodyms^mr0exp
   
-  # Generate attack rates (based on Sonia's code)
+  # Generate attack rates (based on Sonia's code)  
   atk.rates <- topology
   Nsp <- length(bodyms)
   for (i in seq.int(Nsp)) { 

@@ -10,7 +10,7 @@ library(doParallel)
 
 # Switch parallelism
 .USEPARALLEL <- TRUE
-.USENCORES <- 2
+.USENCORES <- 12
 
 # Register a cluster
 register <- function() { 
@@ -33,9 +33,19 @@ parjob <- function() {
     
     return(FALSE);
   } else { 
+  
+    # If a cluster exists and we asked for no parallelism, then stop it
+    if ( ! .USEPARALLEL && exists(".LOCALCLUST") ) { 
+      unregister()
+    # If a cluster does not exist but we asked for parallelism
+    } else if ( .USEPARALLEL && ! exists(".LOCALCLUST") ) { 
+      register()
+    }
+
+    wd <- getwd()
     
     # Get to current directory in workers
-    clusterCall(.LOCALCLUST, setwd(getwd()))
+    clusterCall(.LOCALCLUST, setwd, wd)
     
     # Reload current directory in workers
     clusterCall(.LOCALCLUST, document)
@@ -53,14 +63,16 @@ parjob <- function() {
     clusterExport(.LOCALCLUST, 
                   varlist=ls(envir=globalenv()),
                   envir=globalenv())
+    
+#     # Export loaded DLLs not belonging to a package (e.g. .c models)
+#     loaded.libs <- getLoadedDLLs() %>% lapply(`[[`, "path")
+#     local.libs <- loaded.libs[grepl(wd, loaded.libs)]
+#     
+#     for (lib in local.libs) { 
+#       clusterCall(.LOCALCLUST, dyn.load, lib)
+#     }
+    
+    
     return(TRUE)
   }
-}
-
-# If a cluster exists and we asked for no parallelism, then stop it
-if ( ! .USEPARALLEL && exists(".LOCALCLUST") ) { 
-  unregister()
-# If a cluster does not exist but we asked for parallelism
-} else if ( .USEPARALLEL && ! exists(".LOCALCLUST") ) { 
-  register()
 }

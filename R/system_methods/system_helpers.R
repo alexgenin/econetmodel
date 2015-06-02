@@ -64,3 +64,7 @@ gen_interaction_matrix <-
 gim <- function(links, sys, ...) { 
   gen_interaction_matrix(links, get_size(sys), ...)
 }
+
+oneof <- function(list) { 
+  unlist(sample(list, 1))
+}

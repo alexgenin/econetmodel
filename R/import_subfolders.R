@@ -2,8 +2,8 @@
 # Imports all subfolders file so it works with document()
 
 # Grab a list of these subfolders
-folders <- list.dirs(".", full=TRUE)
-folders <- folders[folders != "."]
+folders <- list.dirs("./R", full=TRUE)
+folders <- folders[! folders %in% c(".","./R")]
 
 # Source all R files in subdirs
 for (f in folders) {

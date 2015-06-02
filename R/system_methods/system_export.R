@@ -13,7 +13,9 @@ discard_if_extinct <- function(result, before,
     
   if (has_extinctions) {
     print("discarded")
-    return( with_system_attr(result[nrow(result), ] * NA_real_, sys) )
+    trunc_result <- result[nrow(result), , drop=FALSE]
+    trunc_result[] <- NA
+    return( with_system_attr(trunc_result, sys) )
   } else { 
     return(result)
   }
@@ -21,16 +23,16 @@ discard_if_extinct <- function(result, before,
 }
 
 # Insert the removal situation
-insert_removal_case <- function(result, 
+insert_removal_case <- function(result, as,
                                 sys=attr(result, "system")) { 
   
   rmsp <- which(get_parms(sys)[['removed_species']] > 0)
   
   # Create matrix with removal cases
-  result <- cbind(as.data.frame(result), 
-                  rmcase=paste0(rmsp,collapse='') )
+  result_new <- cbind(as.data.frame(result), paste0(rmsp,collapse='') )
+  colnames(result_new) <- c(colnames(result), as)
   
-  with_system_attr(result, sys)
+  with_system_attr(result_new, sys)
 }
 
 # Count the number of secondary extinctions
