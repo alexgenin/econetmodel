@@ -6,6 +6,9 @@
 #define min_step_btw_root 5
 #define remaining_eq_value  2.0 // max number of eqs to consider
 
+// We use a tolerance here as will be a double
+#define is_non_zero(a) ( (a) <= 1e-5 ? 0.0 : 1.0 )
+
 /* The template processing in R will produce two #define macros here for : 
  *   - Nsp : the number of species (equal to *neq in the solver function)
  *   - Np  : the number of parameters 
@@ -41,13 +44,6 @@ union parms {
  */
 double ydot_global[Nsp];
 
-/* We want to stop when some number of equilibirum has been reached: we store
- * the maximum number of equilibria to reach in maxeq. Note that this is 
- * stored a double, but deSolve provides correct handling for floating point
- * errors.
- */
-double remaining_eq;
-
 /* We store an array containing the extant species as a global variable: this
  * array is looped over to determine which species are interacting with each
  * other */
@@ -61,7 +57,6 @@ int extant_n;
  */
 void initmod(void (* odeparms)(int *, double *)) {
   // Reset global values
-  remaining_eq     = remaining_eq_value;
   steps_since_root = min_step_btw_root;
   
   // initialize species statuses
@@ -103,7 +98,7 @@ void remove_species(int *n, double *t, double *y) {
 
 /* This is the core function of the model that returns the 
  * partial derivatives */
-void derivs(int *neq,     // neq is the number of equations
+void derivs(int *neq,     // neq is the number of equations 
             double *t,    // value of the independent variable (time)
             double *y,    // current state
             double *ydot, // will contain the derivatives
@@ -132,22 +127,22 @@ void derivs(int *neq,     // neq is the number of equations
   nti_ratfun_vec(Nsp, extant_species, extant_n, K, y, p.yt, p.K, p.dK);
   double atk[Nsp][Nsp];
   nti_ratfun_mat(Nsp, extant_species, extant_n, atk, y, p.yt, p.atk, p.datk);
+  
 //   Rprintf("atk[7][6]: %e (was: %e, modif:%e) \n", atk[6][5], p.atk[6][5], p.datk[4][6][5]);
+//   Rprintf("K[1]: %e (was: %e, modif:%e) \n", K[1], p.K[1], p.dK[1]);
   
   // Fill functional responses 2D array. 
   double F[Nsp][Nsp];
-  frhill(Nsp, extant_species, extant_n, F, y, p.w, atk, p.h, p.q[0]);
+  frhill(Nsp, extant_species, extant_n, F, y, atk, p.h, p.q[0]);
   
   /* Main pop dynamics loop */
   for (int sp=0; sp<extant_n; sp++) { 
     // Focus species is i so it follows the formulae 
     int i = extant_species[sp];
       
-      /* Compute logistic growth
+      /* Logistic growth
        * -------------------- */
       
-      // Compute the true K[i] value as a result of non-trophic interactions
-      // Rprintf("K[%i]: %e\n", i, K[i]);
       ydot[i] = p.r[i] * y[i] * ( 1 - y[i] / K[i] );
       
       /* Trophic interactions
@@ -155,13 +150,16 @@ void derivs(int *neq,     // neq is the number of equations
       
       for (int sp2=0; sp2<extant_n; sp2++) {
         int j = extant_species[sp2];
-          
+        
         // Species i eats j
         ydot[i] += y[i] * F[i][j];
           
         // Species i gets eaten by j
         ydot[i] += - y[j] * F[j][i] / p.e[j][i];
         
+        /* Species i competes with species j 
+        * ---------------------------------- */
+        ydot[i] += - p.c[j][i] * y[j];
       }
       
       

@@ -11,7 +11,6 @@ void frhill(int nsp,
             int extant_n,
             double F[nsp][nsp],
             double y[nsp],
-            double w[nsp][nsp],
             double atk[nsp][nsp],
             double h[nsp],
             double q);
@@ -29,6 +28,7 @@ void nti_ratfun_vec(int nsp,
                     double ab0[nsp], // typical abundance of nt interactor
                     double p[nsp],  // parameter, trophic     
                     double dp[nsp][nsp]);
+
 void nti_ratfun_mat(int nsp, 
                     int extant_species[nsp],
                     int extant_n,

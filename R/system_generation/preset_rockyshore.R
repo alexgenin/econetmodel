@@ -25,12 +25,14 @@ syspreset_rockyshore <- function(tmax=10e3, timestep=2) {
                w = vegan::decostand(trophic_topology, "total", 1),
                # Set metabolic rate of producers to zero 
                # as they have mortality includedin logistic growth
-               x=c(0,0,0,0, x[5:Nsp]),
+               x = c(0,0,0,0, x[5:Nsp]),
                # These need to be always set to something otherwise C code 
                # does not work
-               removed_species=rep(0,Nsp),
+               removed_species = rep(0,Nsp),
+               # Competition between species (linear mortality term)
+               c = matrix(0, ncol=Nsp, nrow=Nsp),
                # Typical abundance of a species 
-               yt=rep(.25, Nsp)) 
+               yt = rep(.25, Nsp)) 
   
   # Set time series parameters
   tmin <- 0 

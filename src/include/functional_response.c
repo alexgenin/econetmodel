@@ -1,6 +1,9 @@
 
 #include <R.h>
-#include <exports.h> //pow
+#include <math.h> //pow
+
+// We use a tolerance here as will be a double
+#define is_non_zero(a) ( (a) <= 1e-5 ? 0.0 : 1.0 )
 
 // Hill type functional response (allows for intermediate func responses between 
 // 2 (q=0) and 3 (q=1)).
@@ -10,7 +13,6 @@ void frhill(int nsp,
             int extant_n,
             double F[nsp][nsp],
             double y[nsp],
-            double w[nsp][nsp],
             double atk[nsp][nsp],
             double h[nsp],
             double q) { 
@@ -20,25 +22,42 @@ void frhill(int nsp,
    * the calling function to check for this. 
    */
   
-  // Compute the sum of available preys 
-  // We only loop over extant species here or otherwise the sum can be nan as
-  // there is no guarantee that y[prey] > 0. This way we avoid the nans to 
-  // propagate to correct F[i][j] values.
-  int prey = 0;
+  /* Compute the sum of available preys 
+   * We only loop over extant species here or otherwise the sum can be nan as
+   * there is no guarantee that y[prey] > 0. This way we avoid the nans to 
+   * propagate to correct F[i][j] values.
+   */
   
-  for (int i=0; i<nsp; i++) { 
+  for (int sp1=0; sp1<extant_n; sp1++) { 
+    int i = extant_species[sp1];
     
-    double sumpreyatk = 0;
-    for (int k=0; k<extant_n; k++) { 
-      prey = extant_species[k];
-      sumpreyatk += atk[i][prey] * pow(y[prey], 1.0 + q);
+    
+    // Compute needed values for the functional response
+    double sumprey_i = 0; 
+    double sumpreyatk_i = 0;
+    for (int sp2=0; sp2<extant_n; sp2++) { 
+      int j = extant_species[sp2];
+      // Total biomass of preys for i 
+      sumprey_i += is_non_zero(atk[i][j]) * y[j];
+      // Total biomass * atk
+      sumpreyatk_i += atk[i][j] * pow(y[j], 1.0 + q);
+//       Rprintf("i: %i j: %i atkij: %e yj: %e -> %e \n", 
+//               i,    j,    atk[i][j],    y[j], sumprey_i);
     }
     
-    // Compute the functional response
-    for (int j=0; j<nsp; j++) { 
-      F[i][j] = w[i][j] * atk[i][j] * pow(y[j], 1.0 + q) / 
-                  ( 1 + ( w[i][j] * h[i] * sumpreyatk ) );
+    // What if sumprey_i == 0 ?
+    
+    for (int sp2=0; sp2<extant_n; sp2++) { 
+      int j = extant_species[sp2];
+      if ( atk[i][j] >= 1e-5 ) { 
+        F[i][j] = y[j] / sumprey_i * atk[i][j] * pow(y[j], 1.0 + q) / 
+                    ( 1 + ( y[j] / sumprey_i * h[i] * sumpreyatk_i) );
+      } else { 
+        F[i][j] = 0.0;
+      }
+//       Rprintf("F[%i][%i]: %e\n", i, j, F[i][j]);
     }
+    
   }
   
 }

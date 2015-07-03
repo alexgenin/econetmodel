@@ -63,6 +63,8 @@ parjob <- function() {
                   varlist=ls(envir=globalenv()),
                   envir=globalenv())
     
+    
+    
 #     # Export loaded DLLs not belonging to a package (e.g. .c models)
 #     loaded.libs <- getLoadedDLLs() %>% lapply(`[[`, "path")
 #     local.libs <- loaded.libs[grepl(wd, loaded.libs)]

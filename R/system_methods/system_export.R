@@ -33,7 +33,7 @@ discard_if_extinct <- function(result, before,
 #     print("discarded")
     
     if (is.matrix(result)) { 
-      result[ , ] <- NA
+      result[1, ] <- NA * result[1, ]
     } else { 
       # We want to keep the factor columns intact
       result[ ,sapply(result, is.numeric)] <- NA
