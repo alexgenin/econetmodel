@@ -40,12 +40,11 @@ stats_effect_sizes <- function(range1_dat, range2_dat,
                                species_cols, removal_col, 
                                ...) { 
   # Get column names
-  removal_col <- dplyr::select_vars_(colnames(range1_dat), substitute(removal_col))
+  removal_col  <- dplyr::select_vars_(colnames(range1_dat), substitute(removal_col))
   species_cols <- dplyr::select_vars_(colnames(range1_dat), substitute(species_cols))
   
   # Get biomass differences
-  delta_biomass <- (range2_dat[ ,species_cols] - range1_dat[ ,species_cols]) / 
-                      range1_dat[ ,species_cols]
+  delta_biomass <- (range2_dat[ ,species_cols] - range1_dat[ ,species_cols]) 
   removed_spp   <- seq.int(length(species_cols)) %in% rmcase2vec(range2_dat[ ,removal_col])
   
   delta_biomass[removed_spp] <- NA

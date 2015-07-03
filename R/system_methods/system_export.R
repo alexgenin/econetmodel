@@ -2,6 +2,23 @@
 # Functions that take a system object and return understandable stuff
 # 
 
+biomass_by_tlvl <- function(result, trophlvls, fun=mean, ...,
+                             sys=attr(result, "system")) { 
+  
+  # get species cols
+  species_cols <- seq.int(get_size(sys))+1
+  
+  output <- matrix(NA_real_, nrow=nrow(result), ncol=length(unique(trophlvls))) 
+  colnames(output) <- paste0("total_",unique(trophlvls))
+  
+  for (i in seq.int(length(unique(trophlvls)))) { 
+    lvl <- unique(trophlvls)[i]
+    output[ ,i] <- apply(result[ , species_cols[trophlvls %in% lvl]], 1, fun)
+  }
+  
+  return( with_system_attr(cbind(result, output), sys) )
+}
+
 # Remove unstable simulations
 discard_if_extinct <- function(result, before, 
                                extinct_threshold,
@@ -12,10 +29,16 @@ discard_if_extinct <- function(result, before,
                                 seq.int(get_size(sys))+1] < extinct_threshold)
     
   if (has_extinctions) {
-    print("discarded")
-    trunc_result <- result[nrow(result), , drop=FALSE]
-    trunc_result[] <- NA
-    return( with_system_attr(trunc_result, sys) )
+  
+#     print("discarded")
+    
+    if (is.matrix(result)) { 
+      result[ , ] <- NA
+    } else { 
+      # We want to keep the factor columns intact
+      result[ ,sapply(result, is.numeric)] <- NA
+    }
+    return( with_system_attr(result, sys) )
   } else { 
     return(result)
   }

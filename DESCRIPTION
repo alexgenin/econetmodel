@@ -7,5 +7,14 @@ Depends: R (>= 3.1.2)
 License: GPLv3
 LazyData: true
 LinkingTo: Rcpp
-Imports: Rcpp, deSolve, rootSolve, magrittr, plyr, R.cache, digest
-Suggests: testthat, ggplot2, tidyr
+Imports: Rcpp, 
+         deSolve, 
+         rootSolve, 
+         magrittr, 
+         plyr, 
+         R.cache, 
+         digest,
+         reshape2,
+         ggplot2,
+         tidyr
+Suggests: testthat

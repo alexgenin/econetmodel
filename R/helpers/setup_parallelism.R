@@ -1,7 +1,6 @@
 # 
-# 
 # This file sets up R for multicore computing. Note that it uses global 
-# variables, which is justified here as we mess with the global state.
+# variables.
 # 
 
 # Load libraries
