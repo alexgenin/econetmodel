@@ -121,7 +121,7 @@ void derivs(int *neq,     // neq is the number of equations
     }
   }
   
-  // TODO: so far non-trophic interactions are turned off
+  // TODO: so far non-trophic interactions only work on atk and K
   // Adjust all parameters with their non-trophic modifiers
   double K[Nsp];
   nti_ratfun_vec(Nsp, extant_species, extant_n, K, y, p.yt, p.K, p.dK);
