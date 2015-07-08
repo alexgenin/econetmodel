@@ -59,9 +59,9 @@ parjob <- function() {
     clusterExport(.LOCALCLUST, 
                   varlist=ls(envir=parent.frame()),
                   envir=parent.frame())
-    clusterExport(.LOCALCLUST, 
-                  varlist=ls(envir=globalenv()),
-                  envir=globalenv())
+#    clusterExport(.LOCALCLUST, 
+#                  varlist=ls(envir=globalenv()),
+#                  envir=globalenv())
     
     
     

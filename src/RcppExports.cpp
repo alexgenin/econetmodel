@@ -5,18 +5,6 @@
 
 using namespace Rcpp;
 
-// select_range
-NumericMatrix select_range(NumericMatrix inmat, NumericVector range);
-RcppExport SEXP netmodr_select_range(SEXP inmatSEXP, SEXP rangeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject __result;
-    Rcpp::RNGScope __rngScope;
-    Rcpp::traits::input_parameter< NumericMatrix >::type inmat(inmatSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type range(rangeSEXP);
-    __result = Rcpp::wrap(select_range(inmat, range));
-    return __result;
-END_RCPP
-}
 // zero_below_cpp
 NumericMatrix zero_below_cpp(NumericMatrix old, double eps);
 RcppExport SEXP netmodr_zero_below_cpp(SEXP oldSEXP, SEXP epsSEXP) {

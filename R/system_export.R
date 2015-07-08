@@ -2,23 +2,6 @@
 # Functions that take a system object and return understandable stuff
 # 
 
-biomass_by_tlvl <- function(result, trophlvls, fun=mean, ...,
-                             sys=attr(result, "system")) { 
-  
-  # get species cols
-  species_cols <- seq.int(get_size(sys))+1
-  
-  output <- matrix(NA_real_, nrow=nrow(result), ncol=length(unique(trophlvls))) 
-  colnames(output) <- paste0("total_",unique(trophlvls))
-  
-  for (i in seq.int(length(unique(trophlvls)))) { 
-    lvl <- unique(trophlvls)[i]
-    output[ ,i] <- apply(result[ , species_cols[trophlvls %in% lvl]], 1, fun)
-  }
-  
-  return( with_system_attr(cbind(result, output), sys) )
-}
-
 # Remove unstable simulations
 discard_if_extinct <- function(result, before, 
                                extinct_threshold,
@@ -27,42 +10,49 @@ discard_if_extinct <- function(result, before,
   # Get simu ids with 
   has_extinctions <- any(result[last_before(before, result[ ,'time']), 
                                 seq.int(get_size(sys))+1] < extinct_threshold)
-    
-  if (has_extinctions) {
   
-#     print("discarded")
+  if (has_extinctions) {
+    result <- result[nrow(result), , drop = FALSE]
     
-    if (is.matrix(result)) { 
-      result[1, ] <- NA * result[1, ]
+    if ( is.matrix(result) ) { 
+      result[] <- NA_real_
     } else { 
-      # We want to keep the factor columns intact
-      result[ ,sapply(result, is.numeric)] <- NA
+      # We want to keep the time column and factorial columns intact
+      result[ ,sapply(result, is.numeric)] <- NA_real_
     }
-    return( with_system_attr(result, sys) )
-  } else { 
-    return(result)
   }
   
+  return( with_system_attr(result, sys) )  
 }
 
-# Insert the removal situation
-insert_removal_case <- function(result, as,
-                                sys=attr(result, "system")) { 
+insert_removal_case_rs <- function(result, 
+                                   prefix='rm', 
+                                   sys=attr(result, "system")) { 
+  rmsp <- sort(which(get_parms(sys)[['removed_species']] > 0))
+  species <- get_species(sys)
+  result <- as.data.frame(result)
   
-  rmsp <- which(get_parms(sys)[['removed_species']] > 0)
+  # Insert into result
+  removal_cols <- matrix('-', nrow=1, ncol=2)
+  colnames(removal_cols) <- paste0(prefix, seq_along(removal_cols))
   
-  # Create matrix with removal cases
-  result_new <- cbind(as.data.frame(result), paste0(rmsp,collapse='') )
-  colnames(result_new) <- c(colnames(result), as)
+  if ( any(c(7,8) %in% rmsp) ) { 
+    removal_cols[1] <- species[max(rmsp)] # always 7 OR 8
+  }
   
+  if ( any(c(5,6) %in% rmsp) ) { 
+    removal_cols[2] <- species[min(rmsp)]
+  }
+  
+  result_new <- cbind(result, removal_cols)
   with_system_attr(result_new, sys)
 }
 
 # Count the number of secondary extinctions
 insert_sec_extinctions <- function(result, 
-                                   removal_time=sys[['removal_time']],
-                                   removal_species=get_parms(sys)[['removed_species']],
-                                   sys=get_sys(result)) { 
+                                   sys = get_sys(result),
+                                   removal_time = sys[['removal_time']],
+                                   removal_species=get_parms(sys)[['removed_species']]) { 
   
   # Warn if not enough info 
   if ( removal_time >= max(result[ ,'time']) ) {
@@ -87,37 +77,8 @@ insert_sec_extinctions <- function(result,
   
   # Add it to result matrix
   result <- cbind(result, secext=rep(secextincts, nrow(result)))
-  with_system_attr(result, sys)
+  with_system_attr(result, sys) # TODO: transfer attributes
 }
-
-insert_effect_size <- function(result, 
-                               removal_time=sys[["removal_time"]], 
-                               removal_species=get_parms(sys)[['removed_species']],
-                               sys=get_sys(result)) { 
-                                 
-  # Warn if not enough info 
-  if ( removal_time >= max(result[ ,'time']) ) {
-    warning("Not enough information to compute effect size. Returning NA.")
-    secextincts <- NA_real_
-    
-  } else { 
-    
-    # Find nearest line before removal time
-    state_before <- result[last_before(removal_time, result[ ,'time']), ]
-    state_after  <- result[nrow(result), ] # last state
-    
-    # Count secondary extinct species
-    spcols <- seq.int(get_size(sys)) + 1 # first col is time, xx nexts are nodes
-    effect_size <- sum( abs(state_after[spcols] - state_before[spcols]) )
-  }
-  
-  # Add it to result matrix
-  result <- cbind(result, effect_size=rep(effect_size, nrow(result)))
-  
-  with_system_attr(result, sys)
-}
-
-
 
 # Insert the parameters as columns in the output matrix
 insert_parms <- function(result, ..., sys=get_sys(result)) { 
@@ -138,65 +99,79 @@ insert_parms <- function(result, ..., sys=get_sys(result)) {
   # Transfer attr and return
   with_system_attr(result, sys)
 }
-
+  
 
 
 # Select time range(s) (so unreadable)
 select_ranges <- function(result, ..., 
                           sys=get_sys(result),
                           add.factor=FALSE, 
-                          summarise.fun=identity) { 
+                          summarise.fun=NULL) { 
   
-  ranges <- match.call(expand.dots=FALSE)[['...']]
+  ranges <- match.call(expand.dots = FALSE)[['...']]
   ranges <- lapply(ranges, eval, envir=sys, enclos=parent.frame())
   
-  # Create new tab 
-  result.new <- lapply(ranges, 
-                       function(r) { 
-                         if (length(r) == 1) { 
-                           result[ismin(abs(result[,"time"]-r)) , , drop=FALSE]
-                         } else { 
-                           result[result[ ,"time"] >= min(r) & 
-                                  result[ ,"time"] <= max(r), ]
-                       }})
-  
-  # Summarise if needed
-  result.new <- lapply(result.new, aaply, 2, summarise.fun, .drop=FALSE)
-  result.new <- lapply(result.new, t)
-  
-  if (add.factor == TRUE) { 
+  if ( any(is.na(result[ ,2])) ) { # unstable result
     
-    # Add range names
-    result.new <- mapply(function(e, name) { 
-                           e <- as.data.frame(e)
-                           e[ ,'range'] <- name
-                           e 
-                         }, 
-                         result.new, names(ranges), 
-                         SIMPLIFY=FALSE)
+    result.new <- matrix(rep(result, length(ranges)), 
+                         nrow=length(ranges), byrow = TRUE)
+    colnames(result.new) <- colnames(result)
     
-    # Bind into a single df and convert to factor 
-    result.new <- do.call(rbind, result.new)
-    result.new[ ,'range'] <- with(result.new, reorder(range, result.new[ ,1]))
-  
+    if (add.factor) { 
+      result.new <- data.frame(range = names(ranges), result.new)
+    }
+    
   } else { 
+    # Create new tab 
+    result.new <- lapply(ranges, 
+                        function(r) { 
+                          if (length(r) == 1) { 
+                            result[ismin(abs(result[ ,"time"]-r)), , drop=FALSE]
+                          } else {
+                            result[result[ ,"time"] >= min(r) & 
+                                   result[ ,"time"] <= max(r),  ]
+                        }})
+    
+    if ( ! is.null(summarise.fun) ) { 
+      result.new <- lapply(result.new, aaply, 2, summarise.fun, .drop=FALSE)
+      result.new <- lapply(result.new, t)
+    }
+    
+    if (add.factor) { 
+      
+      for (range in names(result.new)) { 
+        # The name of the new column is defined from the name of the variable, 
+        # here "range".
+        result.new[[range]] <- data.frame(range=range, result.new[[range]])
+      }
+      
+    }
     
     result.new <- do.call(rbind, result.new)
   }
+  
+  if (add.factor) { 
+    result.new[ ,'range'] <- reorder(result.new[ ,'range'], 
+                                     result.new[ ,'time'])
+  }
+  
+  rownames(result.new) <- as.character(seq_along(rownames(result.new)))
   
   # Transfer attr and return
   with_system_attr(result.new, sys)
 }
 
 # Adjust the names of a deSolve result (mat or df) by adding a prefix to them
-adjust_names <- function(result, prefix="sp", sys=attr(result,'system')) { 
-  # Format column names
-  cols <- colnames(result)
-  nodecols <- seq.int(get_size(sys))+1
-  cols[nodecols] <- paste0(prefix, cols[nodecols])
-  # Insert
-  colnames(result) <- cols
+adjust_names <- function(result, 
+                         spnames = get_species(sys),
+                         sys     = attr(result,'system')) { 
   
+  # Format column names
+  col_names <- colnames(result)
+  nodecols  <- seq.int(get_size(sys)) + 1 # node columns
+  col_names[nodecols] <- spnames
+  
+  colnames(result) <- col_names
   with_system_attr(result,sys)
 }
 

@@ -18,7 +18,12 @@ set_removal <- function(sys, species, at=3000) {
   event <- list(func = 'remove_species',
                 root = FALSE,
                 time = nearestEvent(at, seq(0, get_tmax(sys), 
-                                    by=get_timestep(sys)))) 
+                                    by = get_timestep(sys)))) 
+  
+  # If species are specified as character
+  if (is.character(species)) { 
+    species <- which(get_species(sys) %in% species)
+  }
   
   # Rebuild species removal vector
   to_remove <- rep(0, get_size(sys))
