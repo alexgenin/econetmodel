@@ -1,0 +1,19 @@
+#!/bin/bash 
+#
+# Conquality: tests the quality of a connection and returns an quality index.
+# 
+
+TESTUSER="$1"
+TESTHOST="$2"
+SSHCMD="ssh"
+
+# Measurements
+# ------------
+
+# Mean ping
+MPING=$(ping -c10 -q $TESTHOST | tee | grep rtt | cut -d"/" -f5)
+
+# Time to transfer 500K of data
+TMPFILE="/tmp/conquality_$RANDOM"
+dd if=/dev/urandom bs=500K count=1 > $TMPFILE
+time scp "$TMPFILE" "$TESTUSER@$TESTHOST:/home/$TESTUSER/.conquality_test"
