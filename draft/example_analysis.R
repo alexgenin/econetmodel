@@ -72,6 +72,6 @@ ggplot( gather(test, sp, ab, grazers, mussels) ) +
 ggplot( subset(gather(test, sp, ab, 
                       algaem, grazers, mussels, whelks, crabs, phyto),
                rm1 == 'crabs' & rm2 == '-') ) + 
-  geom_line(aes(time, ab, group=paste(sp,id), color=id), alpha=.2) + 
-  facet_grid( sp ~ range, scales = 'free')
+  geom_line(aes(time, ab, group = paste(sp,id), color = id), alpha = .2) + 
+  facet_grid(sp ~ range, scales = 'free')
 

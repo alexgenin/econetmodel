@@ -26,26 +26,31 @@ discard_if_extinct <- function(result, before,
 }
 
 insert_removal_case_rs <- function(result, 
-                                   prefix='rm', 
-                                   sys=attr(result, "system")) { 
+                                   prefix = 'rm', 
+                                   sys = attr(result, "system")) { 
+  force(sys)
   rmsp <- sort(which(get_parms(sys)[['removed_species']] > 0))
   species <- get_species(sys)
-  result <- as.data.frame(result)
+  result_new <- as.data.frame(result)
   
   # Insert into result
-  removal_cols <- matrix('-', nrow=1, ncol=2)
-  colnames(removal_cols) <- paste0(prefix, seq_along(removal_cols))
+  removal_cols <- data.frame(rm1 = factor(rep("-",nrow(result_new)),
+                                          levels = c('-',species[c(7,8)])),
+                             rm2 = factor(rep("-", nrow(result_new)),
+                                          levels = c('-',species[c(5,6)])))
   
   if ( any(c(7,8) %in% rmsp) ) { 
     removal_cols[1] <- species[max(rmsp)] # always 7 OR 8
   }
   
   if ( any(c(5,6) %in% rmsp) ) { 
-    removal_cols[2] <- species[min(rmsp)]
+    removal_cols[2] <- species[min(rmsp)] # always 5 or 6
   }
   
-  result_new <- cbind(result, removal_cols)
-  with_system_attr(result_new, sys)
+  result_new <- data.frame(result_new, removal_cols)
+  attr(result_new, 'system') <- sys
+  
+  return(result_new)
 }
 
 # Count the number of secondary extinctions
@@ -81,15 +86,15 @@ insert_sec_extinctions <- function(result,
 }
 
 # Insert the parameters as columns in the output matrix
-insert_parms <- function(result, ..., sys=get_sys(result)) { 
+insert_parms <- function(result, ..., sys = get_sys(result)) { 
   
   # Stop if sys is not found
   if (is.null(sys)) stop("System object not found. Pass explicitely with sys=")
   
   # Get params from system
-  to_insert <- as.list(match.call(expand.dots=FALSE))[["..."]] 
+  to_insert <- as.list(match.call(expand.dots = FALSE))[["..."]] 
   to_insert <- lapply(to_insert, eval, 
-                      envir=prepare_parms(get_parms(sys), get_size(sys)))
+                      envir = prepare_parms(get_parms(sys), get_size(sys)))
   
   # Select and bind subsets of parms. Note that unlist() conveniently add numbers
   # when elements of to_insert are vectors. 
@@ -99,14 +104,13 @@ insert_parms <- function(result, ..., sys=get_sys(result)) {
   # Transfer attr and return
   with_system_attr(result, sys)
 }
-  
 
 
 # Select time range(s) (so unreadable)
 select_ranges <- function(result, ..., 
-                          sys=get_sys(result),
-                          add.factor=FALSE, 
-                          summarise.fun=NULL) { 
+                          sys = get_sys(result),
+                          add.factor = FALSE, 
+                          summarise.fun = NULL) { 
   
   ranges <- match.call(expand.dots = FALSE)[['...']]
   ranges <- lapply(ranges, eval, envir=sys, enclos=parent.frame())
@@ -181,7 +185,7 @@ zero_below <- function(result, threshold, sys=get_sys(result)) {
   spcols <- seq.int(get_size(sys)) + 1
   result[ ,spcols][result[ ,spcols] <= threshold] <- 0
   
-  with_system_attr(result,sys)
+  with_system_attr(result, sys)
 }
 
 
@@ -205,7 +209,7 @@ get_sys <- function(result, attr.name='system') {
 }
 
 # Transfer system attribute
-with_system_attr <- function(result,sys) { 
-  attr(result, "system") <- sys
-  result
+with_system_attr <- function(obj, sys) { 
+  attr(obj, "system") <- sys
+  obj
 }

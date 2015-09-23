@@ -9,6 +9,9 @@
 // We use a tolerance here as will be a double
 #define is_non_zero(a) ( (a) <= 1e-5 ? 0.0 : 1.0 )
 
+// Species codenames
+#define MUSSELS 4
+
 /* The template processing in R will produce two #define macros here for : 
  *   - Nsp : the number of species (equal to *neq in the solver function)
  *   - Np  : the number of parameters 
@@ -93,7 +96,12 @@ void remove_species(int *n, double *t, double *y) {
   
 }
 
-
+void double_mussels(int *n, double *t, double *y) { 
+  
+  // We set the mussels (
+  y[MUSSELS] = 2 * y[MUSSELS];
+  
+}
 
 
 /* This is the core function of the model that returns the 

@@ -35,6 +35,20 @@ set_removal <- function(sys, species, at=3000) {
     alter_parms_(removed_species=to_remove) 
 }
 
+# Add the option to specify an event
+set_event <- function(sys, event, at = 3000) { 
+  
+  # Define removal event for solver
+  event <- list(func = event,
+                root = FALSE,
+                time = nearestEvent(at, seq(0, get_tmax(sys), 
+                                    by = get_timestep(sys)))) 
+  
+  sys %>% 
+    alter_system_(solver_parms = list(events = event)) 
+}
+
+
 # Alter the parameters of a system, non-standard evaluation
 alter_parms  <- function(sys, ...) {
   # Get and eval new elems (no pipes here otherwise match.call fails)

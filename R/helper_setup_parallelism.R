@@ -1,47 +1,73 @@
 # 
-# This file sets up R for multicore computing. Note that it uses global 
-# variables.
+# This file sets up R for multicore computing. Note that it uses variables in
+# its enclosure.
 # 
+# Parjob: returns TRUE if conditions are met to run a parallel job, and set them
+# up if required.
+parjob <- function(cores = detectCores()-1, 
+                   reset = FALSE, 
+                   wd    = getwd()) { 
 
-# Load libraries
-library(foreach)
-library(doParallel)
-
-# Switch parallelism
-.USEPARALLEL <- TRUE
-.USENCORES <- 12
-
-# Register a cluster
-register <- function() { 
-  .LOCALCLUST <<- makeCluster(.USENCORES) # oh my <<- in the global env
-  registerDoParallel(.LOCALCLUST) # register parallel backend to foreach
-  message("Started local cluster with ", .USENCORES, " cores")
-}
-
-# Destroy a cluster
-unregister <- function() { 
-  stopCluster(.LOCALCLUST)
-  rm(.LOCALCLUST,envir=globalenv())
-  registerDoSEQ() # register the sequential backend to foreach
-  message("Stopped cluster")
-}
-
-# Parjob: returns TRUE if conditions are met to run a parallel job. 
-parjob <- function() { 
-  if ( ! .USEPARALLEL) { 
-    
+  # Load libraries
+  if ( !require(foreach) || !require(doParallel) ) { 
+    stop("parjob requires foreach and doParallel")
+  }
+  
+  # Init variables if non-existent
+  if ( ! exists('.LOCALCLUST') ) { 
+    .LOCALCLUST <<- list()
+  }
+  
+  # Destroy a cluster
+  unregister <- function() { 
+    if ( cl_ncores(.LOCALCLUST) >= 2) stopCluster(.LOCALCLUST)
+    .LOCALCLUST <<- list()
+    registerDoSEQ() # register the sequential backend to foreach
+    message("Stopped cluster")
+  }
+  
+  # Register a cluster
+  register <- function() { 
+    .LOCALCLUST <<- makeCluster(cores) # oh my <<- in the closure env
+    registerDoParallel(.LOCALCLUST) # register parallel backend to foreach
+    message("Started local cluster with ", cores, " cores")
+  }
+  
+  # Test whether cluster is on
+  cl_ncores <- function(cl) length(cl)
+  
+  # Test whether cluster is functional or whether it produces errors
+  if ( cl_ncores(.LOCALCLUST) >= 2 ) {
+    test_result <- try(clusterEvalQ(.LOCALCLUST, TRUE), silent=TRUE)
+    if ( inherits(test_result,"try-error") ) { 
+      message("Shutting down broken cluster")
+      
+      slaves <- system('pgrep -f -u "$USER" "/usr/lib/R/bin/exec/R --slave"', 
+                       intern = TRUE)
+      for (slave in slaves) { 
+        message('Killing process ', slave)
+        system(paste("kill",slave))
+      }
+      closeAllConnections()
+      .LOCALCLUST <<- list()
+    }
+  }
+  
+  # Operating part 
+  # -----------------------------------------
+  
+  if (reset && cl_ncores(.LOCALCLUST) >= 2) unregister()
+  
+  # Bail if non-parallel computation, but keep cluster status unchanged
+  if ( cores <= 1 ) { 
     return(FALSE);
   } else { 
-  
-    # If a cluster exists and we asked for no parallelism, then stop it
-    if ( ! .USEPARALLEL && exists(".LOCALCLUST") ) { 
+    
+    # We reset if we changed the number of cores 
+    if ( cl_ncores(.LOCALCLUST) != cores ) { 
       unregister()
-    # If a cluster does not exist but we asked for parallelism
-    } else if ( .USEPARALLEL && ! exists(".LOCALCLUST") ) { 
       register()
     }
-
-    wd <- getwd()
     
     # Get to current directory in workers
     clusterCall(.LOCALCLUST, setwd, wd)
@@ -59,20 +85,6 @@ parjob <- function() {
     clusterExport(.LOCALCLUST, 
                   varlist=ls(envir=parent.frame()),
                   envir=parent.frame())
-#    clusterExport(.LOCALCLUST, 
-#                  varlist=ls(envir=globalenv()),
-#                  envir=globalenv())
-    
-    
-    
-#     # Export loaded DLLs not belonging to a package (e.g. .c models)
-#     loaded.libs <- getLoadedDLLs() %>% lapply(`[[`, "path")
-#     local.libs <- loaded.libs[grepl(wd, loaded.libs)]
-#     
-#     for (lib in local.libs) { 
-#       clusterCall(.LOCALCLUST, dyn.load, lib)
-#     }
-    
     
     return(TRUE)
   }
