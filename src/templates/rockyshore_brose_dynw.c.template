@@ -146,7 +146,7 @@ void derivs(int *neq,     // neq is the number of equations
   
   // Fill functional responses 2D array. 
   double F[Nsp][Nsp];
-  frhill(Nsp, extant_species, extant_n, F, y, atk, w, p.h, p.q[0]);
+  frbrose_dynw(Nsp, extant_species, extant_n, F, y, y0, atk, w, p.h, p.q[0]);
   
   /* Main pop dynamics loop */
   for (int sp=0; sp<extant_n; sp++) { 
@@ -165,16 +165,16 @@ void derivs(int *neq,     // neq is the number of equations
         int j = extant_species[sp2];
         
         // Species i eats j
-        ydot[i] += y[i] * F[i][j];
-          
+        ydot[i] += p.x[i] * mc[i] * y[i] * F[i][j];
+        
         // Species i gets eaten by j
-        ydot[i] += - y[j] * F[j][i] / p.e[j][i];
+        ydot[i] += - p.x[j] * p.mc[j] * y[j] * F[j][i] / 
+                       ( p.e[j][i] * p.f[j][i] );
         
         /* Species i competes with species j 
         * ---------------------------------- */
         ydot[i] += - p.c[j][i] * y[j];
       }
-      
       
       /* Mortality 
        * --------- */

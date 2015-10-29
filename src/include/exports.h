@@ -12,6 +12,18 @@ void frhill(int nsp,
             double F[nsp][nsp],
             double y[nsp],
             double atk[nsp][nsp],
+            double w[nsp][nsp],
+            double h[nsp],
+            double q);
+
+// Functional response with dynamic prey preference
+void frhill_dynw(int nsp,
+            int extant_species[nsp],
+            int extant_n,
+            double F[nsp][nsp],
+            double y[nsp],
+            double atk[nsp][nsp],
+            double w[nsp][nsp],
             double h[nsp],
             double q);
 

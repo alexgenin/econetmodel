@@ -16,5 +16,6 @@ Imports: Rcpp,
          digest,
          reshape2,
          ggplot2,
-         tidyr
+         tidyr,
+         magrittr
 Suggests: testthat

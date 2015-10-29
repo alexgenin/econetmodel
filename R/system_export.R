@@ -180,7 +180,7 @@ adjust_names <- function(result,
 }
 
 # Zero below the threshold
-zero_below <- function(result, threshold, sys=get_sys(result)) { 
+zero_below <- function(result, threshold, sys = get_sys(result)) { 
   
   spcols <- seq.int(get_size(sys)) + 1
   result[ ,spcols][result[ ,spcols] <= threshold] <- 0

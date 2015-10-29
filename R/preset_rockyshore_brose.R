@@ -1,13 +1,13 @@
 # 
 # Generate a trophic_only system
 # 
-syspreset_rockyshore <- function(tmax = 10e3, timestep = 2, 
+syspreset_rockyshore_brose <- function(tmax = 10e3, timestep = 2, 
         template = "./src/templates/rockyshore.c.template") {
   
   # Set body masses
   # We use a body/mass ratio between prey and predator of 10, which is the mode
   # of its distribution for invertebrates (Brose 2006, Fig. 3).
-  bodyms <- c(1,1,1,1, 10, 10, 20, 20) 
+  bodyms <- c(1,1,1,1, 10, 10, 20, 20)
   Nsp <- length(bodyms)
   
   # We maintain the topology constant here

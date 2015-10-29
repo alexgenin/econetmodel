@@ -70,3 +70,15 @@ alter_parms_ <- function(sys, ...) {
 # Alias for alter_system which is more human friendly in pipes
 alter_system  <- alter_list
 alter_system_ <- alter_list_
+
+# A helper to create d_ matrices (that alter the parameters of certain 
+# other parameters). 
+maked <- function(thing, default.val = 0) { 
+  
+  vecmat_switch(thing, 
+                isvec = matrix(default.val, 
+                               nrow = length(thing), 
+                               ncol = length(thing)), 
+                ismat = array(default.val,  rep(nrow(thing), 3)))
+  
+}

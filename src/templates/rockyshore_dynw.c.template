@@ -146,7 +146,7 @@ void derivs(int *neq,     // neq is the number of equations
   
   // Fill functional responses 2D array. 
   double F[Nsp][Nsp];
-  frhill(Nsp, extant_species, extant_n, F, y, atk, w, p.h, p.q[0]);
+  frhill_dynw(Nsp, extant_species, extant_n, F, y, atk, w, p.h, p.q[0]);
   
   /* Main pop dynamics loop */
   for (int sp=0; sp<extant_n; sp++) { 
