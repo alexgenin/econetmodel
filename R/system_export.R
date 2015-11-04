@@ -179,6 +179,21 @@ adjust_names <- function(result,
   with_system_attr(result,sys)
 }
 
+# Change column names in the result df/matrix
+change_names <- function(result, ..., sys = attr(result, 'system')) { 
+  to_insert <- as.list(match.call(expand.dots = FALSE))[["..."]] 
+  
+  for (n in names(to_insert)) { 
+    which_name <- colnames(result) == n
+    if ( ! any(which_name) ) { 
+      warning('Name', n, 'not found in the object passed')
+    }
+    colnames(result)[which_name] <- to_insert[[n]]
+  }
+  
+  with_system_attr(result, sys)
+}
+
 # Zero below the threshold
 zero_below <- function(result, threshold, sys = get_sys(result)) { 
   

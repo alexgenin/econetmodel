@@ -27,6 +27,28 @@ void frhill_dynw(int nsp,
             double h[nsp],
             double q);
 
+// Functional responses very similar to frhill but I did not want to erase the 
+// code just yet
+void fryodzis(int nsp,
+              int extant_species[nsp],
+              int extant_n,
+              double F[nsp][nsp],
+              double y[nsp],
+              double atk[nsp][nsp],
+              double w[nsp][nsp],
+              double h[nsp],
+              double q);
+
+void fryodzis_dynw(int nsp,
+                   int extant_species[nsp],
+                   int extant_n,
+                   double F[nsp][nsp],
+                   double y[nsp],
+                   double atk[nsp][nsp],
+                   double w[nsp][nsp],
+                   double h[nsp],
+                   double q);
+
 // Safe pow() for negative numbers (see .c file)
 double pow2(double x, 
             double y);
