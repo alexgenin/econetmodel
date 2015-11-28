@@ -3,19 +3,23 @@ Title: Prototyper for ecological networks modelling
 Version: 0.0001
 Authors@R: "Alexandre Génin <alexandre.genin@univ-montp2.fr> [aut, cre]"
 Description: Prototypes ecological networks.
-Depends: R (>= 3.1.2)
+Depends:
+    R (>= 3.1.2)
 License: GPLv3
 LazyData: true
 LinkingTo: Rcpp
-Imports: Rcpp, 
-         deSolve, 
-         rootSolve, 
-         magrittr, 
-         plyr, 
-         R.cache, 
-         digest,
-         reshape2,
-         ggplot2,
-         tidyr,
-         magrittr
-Suggests: testthat
+Imports:
+    Rcpp,
+    deSolve,
+    rootSolve,
+    magrittr,
+    plyr,
+    R.cache,
+    digest,
+    reshape2,
+    ggplot2,
+    tidyr,
+    magrittr
+Suggests:
+    testthat
+RoxygenNote: 5.0.1
