@@ -219,7 +219,7 @@ void fryodzis_dynw(int nsp,
       int k = extant_species[sp2];
       
       double wik = w[i][k] * y[k] / sumprey_i;
-
+      
       sumpreyatk_i += wik * atk[i][k] * pow(y[k], 1.0 + q);
     }
     

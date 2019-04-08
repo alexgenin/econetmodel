@@ -40,13 +40,6 @@ union parms {
   double value[Np];
 } p; // instance (name to be referred to)
 
-/* We want to be able to determine if the system is at equlibrium to perform
- * an action. To do this we need to have a globally available copy of the 
- * derivatives. 
- * This line defines this array.
- */
-double ydot_global[Nsp];
-
 /* We store an array containing the extant species as a global variable: this
  * array is looped over to determine which species are interacting with each
  * other */
@@ -67,11 +60,7 @@ void initmod(void (* odeparms)(int *, double *)) {
   for (int i=0; i<Nsp; i++) {
     extant_species[i] = i;
   }
-  
-  // non-zero the derivatives on start so there is no equilibrium detected
-  // on step 1
-  memset(ydot_global, 1, sizeof(ydot_global)); 
-  
+    
   // Copy params values into correct array
   int N=Np;
   odeparms(&N, p.value); 
@@ -129,7 +118,6 @@ void derivs(int *neq,     // neq is the number of equations
     }
   }
   
-  // TODO: so far non-trophic interactions only work on atk and K
   // Adjust all parameters with their non-trophic modifiers
   double K[Nsp];
   nti_ratfun_vec(Nsp, extant_species, extant_n, K, y, p.yt, p.K, p.dK);

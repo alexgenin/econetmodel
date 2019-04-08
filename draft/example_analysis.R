@@ -52,8 +52,8 @@ system.time(
                  mutate(algaem = algae1+algae2+algae3+algae4),
                  
                # Computing options
-               .progress='time',
-               .parallel=parjob())
+               .progress = 'time',
+               .parallel = parjob())
 )
 
 # 36k replicates ~= 25 minutes w/ 12 cores ( ~ 2/s)
@@ -70,7 +70,7 @@ ggplot( gather(test, sp, ab, grazers, mussels) ) +
 # Run only if format_samplerun() in chain
 # plot_samplerun(test)
 ggplot( subset(gather(test, sp, ab, 
-                      algaem, grazers, mussels, whelks, crabs, phyto),
+                      algaem, grazers, mussels, whelks, crabs),
                rm1 == 'crabs' & rm2 == '-') ) + 
   geom_line(aes(time, ab, group = paste(sp,id), color = id), alpha = .2) + 
   facet_grid(sp ~ range, scales = 'free')

@@ -1,8 +1,10 @@
 # 
 # Generate a trophic_only system
 # 
-syspreset_rockyshore <- function(tmax = 10e3, timestep = 2, 
-        template = "./src/templates/rockyshore.c.template") {
+syspreset_rockyshore <- function(tmax = 10e3, 
+                                 timestep = 2, 
+                                 template = "./src/templates/rockyshore.c.template",
+                                 a0 = 0.05) {
   
   # Set body masses
   # We use a body/mass ratio between prey and predator of 10, which is the mode
@@ -20,7 +22,7 @@ syspreset_rockyshore <- function(tmax = 10e3, timestep = 2,
   w <- trophic_topology / ifelse(apply(trophic_topology, 1, sum) > 0,
                                  apply(trophic_topology, 1, sum), 1)
   
-  delta <- .15
+  delta <- .15 # 1 - .15 = 0.85
   
   # Topology 
   # Build the parameter list
@@ -47,7 +49,6 @@ syspreset_rockyshore <- function(tmax = 10e3, timestep = 2,
                yt = rep(.25, Nsp)) 
   
   # Compute attack rates
-  a0 <- 0.01
   atk <- trophic_topology
   for (i in seq_along(bodyms)) {
     for (j in seq_along(bodyms)) {

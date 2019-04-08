@@ -1,4 +1,5 @@
 Package: netmodr
+Encoding: UTF-8
 Title: Prototyper for ecological networks modelling
 Version: 0.0001
 Authors@R: "Alexandre Génin <alexandre.genin@univ-montp2.fr> [aut, cre]"
@@ -12,7 +13,6 @@ Imports:
     Rcpp,
     deSolve,
     rootSolve,
-    magrittr,
     plyr,
     R.cache,
     digest,
@@ -22,4 +22,4 @@ Imports:
     magrittr
 Suggests:
     testthat
-RoxygenNote: 5.0.1
+RoxygenNote: 6.1.1

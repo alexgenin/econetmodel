@@ -8,7 +8,8 @@ gen_c_code <- function(parameters,         # System list
                        output=NULL,        # 
                        overwrite=FALSE,    #   
                        tags_list=NULL,     # tags list
-                       tags_funs=NULL) {   # tags function
+                       tags_funs=NULL, 
+                       quiet = FALSE) {   # tags function
   
   if (is.null(tags_list)) {
     tags_list <- list('declarations', 'defines')
@@ -25,7 +26,7 @@ gen_c_code <- function(parameters,         # System list
   
   # Replace all tags
   for (n in seq.int(length(tags_list))) {
-    message('Replacing ', mktag(tags_list[[n]]))
+    if (!quiet) message('Replacing ', mktag(tags_list[[n]]))
     txt <- replaceonetag(txt, 
                          tags_list[[n]], 
                          tags_funs[[n]](parameters))

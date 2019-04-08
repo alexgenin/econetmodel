@@ -28,8 +28,9 @@ compile <- function(system,
   # Generate c code
   gen_c_code(get_parms(system), 
              get_template(system),
-             output=output_cfile,
-             overwrite=TRUE)
+             output = output_cfile,
+             overwrite = TRUE, 
+             quiet = quiet)
   
   system[["cfile"]] <- output_cfile
   dllname <- sub('.c','',basename(output_cfile), fixed=TRUE)
@@ -42,9 +43,10 @@ compile <- function(system,
   cmd <- paste0('PKG_CFLAGS="', PKG_CFLAGS, ' -I ', include.dir, ' -std=c99" ',
                 'R CMD SHLIB ', 
                 includes, ' ',
-                output_cfile, " -o ", output_so)
+                output_cfile, " -o ", output_so, 
+                ifelse(quiet, "&>/dev/null", ""))
   
-  message(cmd)
+  if (!quiet) message(cmd)
   exit_code <- system(cmd, ignore.stdout=quiet, ignore.stderr=quiet)
   
   if (exit_code == 0) { 

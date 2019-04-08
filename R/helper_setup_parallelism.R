@@ -4,13 +4,13 @@
 # 
 # Parjob: returns TRUE if conditions are met to run a parallel job, and set them
 # up if required.
-parjob <- function(cores = detectCores()-1, 
+.parjob <- function(cores = detectCores()-1, 
                    reset = FALSE, 
                    wd    = getwd()) { 
 
   # Load libraries
-  if ( !require(foreach) || !require(doParallel) ) { 
-    stop("parjob requires foreach and doParallel")
+  if ( !require(foreach) || !require(doParallel) || !require(devtools) ) { 
+    stop("parjob requires foreach, doParallel and devtools")
   }
   
   # Init variables if non-existent
@@ -60,7 +60,8 @@ parjob <- function(cores = detectCores()-1,
   
   # Bail if non-parallel computation, but keep cluster status unchanged
   if ( cores <= 1 ) { 
-    return(FALSE);
+    return(FALSE)
+  
   } else { 
     
     # We reset if we changed the number of cores 
@@ -72,8 +73,10 @@ parjob <- function(cores = detectCores()-1,
     # Get to current directory in workers
     clusterCall(.LOCALCLUST, setwd, wd)
     
-    # Reload current directory in workers
-    clusterCall(.LOCALCLUST, document)
+    # Reload current package in workers if appropriate
+    if ( devtools::is.package(getwd()) ) { 
+      clusterCall(.LOCALCLUST, document)
+    }
     
     # Export packages
     pkgs <- .packages()
@@ -81,10 +84,10 @@ parjob <- function(cores = detectCores()-1,
       clusterCall(.LOCALCLUST, library, pkg, character.only=TRUE)
     }
     
-    # Export environments
+    # Export environments, currently just exports the parent environment
     clusterExport(.LOCALCLUST, 
-                  varlist=ls(envir=parent.frame()),
-                  envir=parent.frame())
+                  varlist = ls(envir = parent.frame()),
+                  envir = parent.frame())
     
     return(TRUE)
   }
