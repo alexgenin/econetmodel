@@ -5,7 +5,8 @@ Version: 0.0001
 Authors@R: "Alexandre Génin <alexandre.genin@univ-montp2.fr> [aut, cre]"
 Description: Prototypes ecological networks.
 Depends:
-    R (>= 3.1.2)
+    R (>= 3.1.2), 
+    magrittr
 License: GPLv3
 LazyData: true
 LinkingTo: Rcpp
@@ -18,8 +19,7 @@ Imports:
     digest,
     reshape2,
     ggplot2,
-    tidyr,
-    magrittr
+    tidyr
 Suggests:
     testthat
 RoxygenNote: 6.1.1
